@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "717074712559",
+    "project_id": "db-ql-tro",
+    "storage_bucket": "db-ql-tro.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:717074712559:android:a57fe2fb5336225202581a",
+        "android_client_info": {
+          "package_name": "com.example.do_an_cuoi_ki"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAQXuyf-SatekKiWZ_zp9cIzBUOoTYxorE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
