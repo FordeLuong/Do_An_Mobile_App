@@ -1,7 +1,9 @@
-import 'package:firebase_core/firebase_core.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:do_an_cuoi_ki/screens/owner/add_room_screen.dart';
+
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_database/firebase_database.dart';
+
 import '../../models/user.dart';
 import '../../models/user_role.dart';
 import 'package:do_an_cuoi_ki/models/room.dart';
@@ -44,26 +46,45 @@ class _LoginPageState extends State<LoginPage> {
         password: _passwordController.text.trim(),
       );
       print('Đăng nhập thành công: ${userCredential.user!.uid}');
+      
 
       // Lấy thông tin user từ Realtime Database
-      final FirebaseDatabase database = FirebaseDatabase.instanceFor(
-        app: Firebase.app(),
-        databaseURL: 'https://db-ql-tro-default-rtdb.firebaseio.com/',
-      );
-      final DatabaseReference userRef = database.ref('users/${userCredential.user!.uid}');
-      final DatabaseEvent event = await userRef.once();
-      final Map<dynamic, dynamic>? userData =
-          event.snapshot.value as Map<dynamic, dynamic>?;
+      // final FirebaseDatabase database = FirebaseDatabase.instanceFor(
+      //   app: Firebase.app(),
+      //   databaseURL: 'https://db-ql-tro-default-rtdb.firebaseio.com/',
+      // );
+      // final DatabaseReference userRef = database.ref('users/${userCredential.user!.uid}');
+      // final DatabaseEvent event = await userRef.once();
+      // final Map<dynamic, dynamic>? userData =
+      //     event.snapshot.value as Map<dynamic, dynamic>?;
 
-      if (userData == null) {
+      // if (userData == null) {
+      //   throw Exception('User data not found');
+      // }
+
+      // // Chuyển đổi thành UserModel
+      // final UserModel user = UserModel.fromJson(Map<String, dynamic>.from(userData));
+
+
+
+      final FirebaseFirestore firestore = FirebaseFirestore.instance;
+      final DocumentReference userRef = firestore.collection('users').doc(userCredential.user!.uid);
+
+      final DocumentSnapshot userDoc = await userRef.get();
+
+      if (!userDoc.exists) {
         throw Exception('User data not found');
       }
 
       // Chuyển đổi thành UserModel
-      final UserModel user = UserModel.fromJson(Map<String, dynamic>.from(userData));
+      final userData = userDoc.data() as Map<String, dynamic>;
+      // Điều hướng dựa trên role
+      final UserModel user = UserModel.fromJson(userData);
+
+
 
       // Điều hướng dựa trên role
-      _navigateBasedOnRole(user.role);
+      _navigateBasedOnRole(user);
     } on FirebaseAuthException catch (e) {
       setState(() {
         _errorMessage = _getErrorMessage(e.code);
@@ -79,8 +100,8 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
-  void _navigateBasedOnRole(UserRole role) {
-    switch (role) {
+  void _navigateBasedOnRole(UserModel user) {
+    switch (user.role) {
       case UserRole.customer:
         // Giả sử allRooms, userLat, userLng đã được lấy từ Firestore hoặc nhập thủ công
       final List<RoomModel> allRooms = []; // Thay bằng dữ liệu thực tế
@@ -98,7 +119,14 @@ class _LoginPageState extends State<LoginPage> {
       );
       break;
       case UserRole.owner:
-        Navigator.pushReplacementNamed(context, '/room_list_screen');
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => CreateBuildingScreen(
+              currentUser: user, // Truyền vào UserModel hiện tại
+            ),
+          ),
+        );
         break;
       default:
         Navigator.pushReplacementNamed(context, '/login'); // Quay lại login nếu role không hợp lệ

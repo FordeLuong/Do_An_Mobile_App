@@ -1,6 +1,7 @@
 import 'package:do_an_cuoi_ki/firebase_options.dart';
 import 'package:do_an_cuoi_ki/screens/auth/login_screen.dart';
 import 'package:do_an_cuoi_ki/screens/auth/register_screen.dart';
+import 'package:do_an_cuoi_ki/screens/owner/add_room_screen.dart';
 import 'package:do_an_cuoi_ki/screens/owner/room_list_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -35,7 +36,7 @@ class MyApp extends StatelessWidget {
       routes: {
         '/login': (context) => const LoginPage(),
         '/register': (context) => const RegisterPage(),
-        // '/room_list_screen': (context) => const RoomListScreen(),
+        // '/add_building': (context) => const CreateBuildingScreen(),
       },
     );
   }
