@@ -4,7 +4,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import '../../models/user.dart';
 import '../../models/user_role.dart';
-
+import 'package:do_an_cuoi_ki/models/room.dart';
+import 'package:do_an_cuoi_ki/screens/user/near_room.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({Key? key}) : super(key: key);
@@ -42,34 +43,27 @@ class _LoginPageState extends State<LoginPage> {
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
-      print('duoc4');
+      print('Đăng nhập thành công: ${userCredential.user!.uid}');
 
       // Lấy thông tin user từ Realtime Database
-      // final DatabaseReference userRef = FirebaseDatabase.instance
-      //     .ref()
-      //     .child('users')
-      //     .child(userCredential.user!.uid);
-      // Thêm URL của bạn (lấy từ Firebase Console > Realtime Database)
       final FirebaseDatabase database = FirebaseDatabase.instanceFor(
         app: Firebase.app(),
-        databaseURL: 'https://db-ql-tro-default-rtdb.firebaseio.com/', // Thay bằng URL thực tế
+        databaseURL: 'https://db-ql-tro-default-rtdb.firebaseio.com/',
       );
       final DatabaseReference userRef = database.ref('users/${userCredential.user!.uid}');
-      print('duoc3  ${userCredential.user!.uid}');
       final DatabaseEvent event = await userRef.once();
       final Map<dynamic, dynamic>? userData =
           event.snapshot.value as Map<dynamic, dynamic>?;
-      print('duoc2');
+
       if (userData == null) {
         throw Exception('User data not found');
       }
-      print('duoc1');
+
       // Chuyển đổi thành UserModel
       final UserModel user = UserModel.fromJson(Map<String, dynamic>.from(userData));
-      print(user.email);
+
       // Điều hướng dựa trên role
-      // _navigateBasedOnRole(user.role);
-      print('duoc');
+      _navigateBasedOnRole(user.role);
     } on FirebaseAuthException catch (e) {
       setState(() {
         _errorMessage = _getErrorMessage(e.code);
@@ -87,14 +81,27 @@ class _LoginPageState extends State<LoginPage> {
 
   void _navigateBasedOnRole(UserRole role) {
     switch (role) {
-      case UserRole.admin:
-        Navigator.pushReplacementNamed(context, '/login');
-        break;
-      case UserRole.owner:
-        Navigator.pushReplacementNamed(context, '/login');
-        break;
       case UserRole.customer:
-        Navigator.pushReplacementNamed(context, '/login');
+        // Giả sử allRooms, userLat, userLng đã được lấy từ Firestore hoặc nhập thủ công
+      final List<RoomModel> allRooms = []; // Thay bằng dữ liệu thực tế
+      final double userLat = 10.7769; // Vĩ độ ví dụ (Hà Nội)
+      final double userLng = 106.7009; // Kinh độ ví dụ (Hà Nội)
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => NearbyRoomsScreen(
+            allRooms: allRooms,
+            userLat: userLat,
+            userLng: userLng,
+          ),
+        ),
+      );
+      break;
+      case UserRole.owner:
+        Navigator.pushReplacementNamed(context, '/room_list_screen');
+        break;
+      default:
+        Navigator.pushReplacementNamed(context, '/login'); // Quay lại login nếu role không hợp lệ
         break;
     }
   }

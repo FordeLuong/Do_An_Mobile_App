@@ -1,15 +1,15 @@
 import 'package:do_an_cuoi_ki/firebase_options.dart';
 import 'package:do_an_cuoi_ki/screens/auth/login_screen.dart';
+import 'package:do_an_cuoi_ki/screens/auth/register_screen.dart';
+import 'package:do_an_cuoi_ki/screens/owner/room_list_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 
-import 'screens/auth/register_screen.dart';
-
-void main()async {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  
-  void checkConnection() async{
+
+  void checkConnection() async {
     bool isConnected = await Firebase.apps.isNotEmpty;
     print('FireBase connection : $isConnected');
   }
@@ -20,7 +20,7 @@ void main()async {
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
   static final navigatorKey = GlobalKey<NavigatorState>();
-  // This widget is the root of your application.
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -30,13 +30,13 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
       debugShowCheckedModeBanner: false,
-      home:RegisterPage() ,
-      initialRoute: '',
+      home: const LoginPage(),
+      initialRoute: '/login',
       routes: {
-        '/login': (context) =>  LoginPage(),
-
-        //MyListDeTai
+        '/login': (context) => const LoginPage(),
+        '/register': (context) => const RegisterPage(),
+        // '/room_list_screen': (context) => const RoomListScreen(),
       },
-    );  
+    );
   }
 }
