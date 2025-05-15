@@ -75,17 +75,17 @@ class _RegisterPageState extends State<RegisterPage> {
 
       final FirebaseFirestore firestore = FirebaseFirestore.instance;
 
-    await firestore.collection('users').doc(userCredential.user!.uid).set({
-      'createdAt': DateTime.now().toIso8601String(),
-      'email': _emailController.text.trim(),
-      'id': userCredential.user!.uid,
-      'name': _nameController.text.trim(),
-      'phoneNumber': _phoneController.text.trim().isEmpty
-          ? null
-          : _phoneController.text.trim(),
-      'profileImageUrl': null,
-      'role': _selectedRole.toJson(), // đảm bảo role của bạn có .toJson()
-    });
+      await firestore.collection('users').doc(userCredential.user!.uid).set({
+        'createdAt': DateTime.now().toIso8601String(),
+        'email': _emailController.text.trim(),
+        'id': userCredential.user!.uid,
+        'name': _nameController.text.trim(),
+        'phoneNumber': _phoneController.text.trim().isEmpty
+            ? null
+            : _phoneController.text.trim(),
+        'profileImageUrl': null,
+        'role': _selectedRole.toJson(), // đảm bảo role của bạn có .toJson()
+      });
 
 
       // 3. Hiển thị thông báo và chuyển hướng
