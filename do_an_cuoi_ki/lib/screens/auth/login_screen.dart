@@ -1,13 +1,14 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:do_an_cuoi_ki/screens/owner/add_room_screen.dart';
-
+import 'package:do_an_cuoi_ki/screens/owner/building_list.dart';
+import 'package:do_an_cuoi_ki/screens/owner/owner_main_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-
 import '../../models/user.dart';
 import '../../models/user_role.dart';
 import 'package:do_an_cuoi_ki/models/room.dart';
 import 'package:do_an_cuoi_ki/screens/user/near_room.dart';
+import '../user/main_screen.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({Key? key}) : super(key: key);
@@ -122,7 +123,7 @@ class _LoginPageState extends State<LoginPage> {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => CreateBuildingScreen(
+            builder: (context) => HomeScreenWithBottomNav(
               currentUser: user, // Truyền vào UserModel hiện tại
             ),
           ),

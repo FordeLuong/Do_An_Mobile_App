@@ -1,10 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:do_an_cuoi_ki/models/user.dart';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 
 class BuildingListScreen extends StatelessWidget {
-  const BuildingListScreen({super.key});
+  const BuildingListScreen({super.key, required UserModel currentUser});
 
   @override
   Widget build(BuildContext context) {

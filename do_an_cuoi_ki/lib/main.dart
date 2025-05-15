@@ -34,11 +34,11 @@ class MyApp extends StatelessWidget {
       ),
       debugShowCheckedModeBanner: false,
       home: const LoginPage(),
-      initialRoute: '/add_building',
+      initialRoute: '/login',
       routes: {
         '/login': (context) => const LoginPage(),
         '/register': (context) => const RegisterPage(),
-         '/add_building': (context) => const BuildingListScreen(),
+        //  '/add_building': (context) => const BuildingListScreen(),
       },
     );
   }
