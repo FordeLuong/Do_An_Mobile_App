@@ -39,6 +39,7 @@ extension RoomStatusExtension on RoomStatus {
 /// Class đại diện cho thông tin một phòng trọ/nhà trọ
 class RoomModel {
   final String id; // ID duy nhất của phòng trọ
+  final String buildingId;
   final String ownerId; // ID của người chủ sở hữu (liên kết với UserModel)
   final String title; // Tiêu đề bài đăng (ví dụ: "Phòng trọ giá rẻ quận 1")
   final String description; // Mô tả chi tiết về phòng trọ
@@ -56,6 +57,7 @@ class RoomModel {
 
   RoomModel({
     required this.id,
+    required this.buildingId,
     required this.ownerId,
     required this.title,
     required this.description,
@@ -76,6 +78,7 @@ class RoomModel {
   factory RoomModel.fromJson(Map<String, dynamic> json) {
     return RoomModel(
       id: json['id'] as String? ?? '',
+      buildingId: json['id']as String? ?? '',
       ownerId: json['ownerId'] as String? ?? '',
       title: json['title'] as String? ?? 'Chưa có tiêu đề',
       description: json['description'] as String? ?? '',
@@ -112,6 +115,7 @@ class RoomModel {
   Map<String, dynamic> toJson() {
     return {
       'id': id,
+      'buildingId':buildingId,
       'ownerId': ownerId,
       'title': title,
       'description': description,
@@ -132,6 +136,7 @@ class RoomModel {
    /// Hàm copyWith để tạo bản sao và cập nhật
    RoomModel copyWith({
     String? id,
+    String? buildingId,
     String? ownerId,
     String? title,
     String? description,
@@ -149,6 +154,7 @@ class RoomModel {
   }) {
     return RoomModel(
       id: id ?? this.id,
+      buildingId: buildingId ?? this.buildingId,
       ownerId: ownerId ?? this.ownerId,
       title: title ?? this.title,
       description: description ?? this.description,

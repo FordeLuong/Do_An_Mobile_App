@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -56,21 +57,36 @@ class _RegisterPageState extends State<RegisterPage> {
       );
 
       // 2. Khởi tạo Realtime Database với URL của bạn
-      final FirebaseDatabase database = FirebaseDatabase.instanceFor(
-        app: Firebase.app(), // Sử dụng app Firebase mặc định
-        databaseURL: 'https://db-ql-tro-default-rtdb.firebaseio.com/', // Thay bằng URL của bạn
-      );
+      // final FirebaseDatabase database = FirebaseDatabase.instanceFor(
+      //   app: Firebase.app(), // Sử dụng app Firebase mặc định
+      //   databaseURL: 'https://db-ql-tro-default-rtdb.firebaseio.com/', // Thay bằng URL của bạn
+      // );
 
-      // 3. Lưu thông tin vào Realtime Database
-      await database.ref('users/${userCredential.user!.uid}').set({
+      // // 3. Lưu thông tin vào Realtime Database
+      // await database.ref('users/${userCredential.user!.uid}').set({
+      //   'createdAt': DateTime.now().toIso8601String(),
+      //   'email': _emailController.text.trim(),
+      //   'id': userCredential.user!.uid,
+      //   'name': _nameController.text.trim(),
+      //   'phoneNumber': _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
+      //   'profileImageUrl': null,
+      //   'role': _selectedRole.toJson(),
+      // });
+
+      final FirebaseFirestore firestore = FirebaseFirestore.instance;
+
+      await firestore.collection('users').doc(userCredential.user!.uid).set({
         'createdAt': DateTime.now().toIso8601String(),
         'email': _emailController.text.trim(),
         'id': userCredential.user!.uid,
         'name': _nameController.text.trim(),
-        'phoneNumber': _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
+        'phoneNumber': _phoneController.text.trim().isEmpty
+            ? null
+            : _phoneController.text.trim(),
         'profileImageUrl': null,
-        'role': _selectedRole.toJson(),
+        'role': _selectedRole.toJson(), // đảm bảo role của bạn có .toJson()
       });
+
 
       // 3. Hiển thị thông báo và chuyển hướng
       if (mounted) {
