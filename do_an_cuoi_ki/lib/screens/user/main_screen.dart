@@ -1,23 +1,33 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:do_an_cuoi_ki/models/user.dart';
+import 'package:do_an_cuoi_ki/screens/auth/login_screen.dart';
+import 'package:do_an_cuoi_ki/screens/auth/register_screen.dart';
+
+import 'package:do_an_cuoi_ki/screens/user/room_list_screen_user.dart';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:flutter_rating_bar/flutter_rating_bar.dart';
+import 'package:intl/intl.dart';
 
-class BuildingListScreen extends StatelessWidget {
-  const BuildingListScreen({super.key, required UserModel currentUser});
+class BuildingListScreen extends StatefulWidget {
+  const BuildingListScreen({super.key});
+    @override
+    State<BuildingListScreen> createState() => _MainScreenState();
+  }
+
+
+
+
+class _MainScreenState extends State<BuildingListScreen> {
+  UserModel? currentUser;
+  String formattedDate = DateFormat('dd/MM/yyyy').format(DateTime.now());
+
+  
+
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      // appBar: AppBar(
-      //   title: const Text("Sân gần bạn"),
-      //   backgroundColor: Colors.green.shade800,
-      //   actions: [
-      //     IconButton(onPressed: () {}, icon: const Icon(Icons.search)),
-      //   ],
-      // ),
       body: Column(
         children: [
 
@@ -33,24 +43,45 @@ class BuildingListScreen extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      "Thứ tư, 14/05/2025",
+                      formattedDate,
                       style: const TextStyle(color: Colors.white, fontSize: 14),
                     ),
                     Row(
                       children: [
                         ElevatedButton(
-                          onPressed: () {},
+                          onPressed: currentUser == null 
+                              ? () async {
+                                  final result = await Navigator.push(
+                                    context,
+                                    MaterialPageRoute(builder: (context) => LoginPage()),
+                                  );
+                                  if (result != null && result is UserModel) {
+                                    setState(() {
+                                      currentUser = result;
+                                    });
+                                  }
+                                }
+                              : null, // Vô hiệu hóa khi có user
                           style: ElevatedButton.styleFrom(backgroundColor: Colors.white),
-                          child: const Text("Đăng nhập", style: TextStyle(color: Colors.black)),
+                          child: currentUser == null
+                              ? const Text('Đăng nhập', style: TextStyle(color: Colors.black))
+                              : Text(
+                                  'Xin chào, ${currentUser!.name}',
+                                  style: const TextStyle(color: Colors.black),
+                                ),
                         ),
-                        const SizedBox(width: 8),
-                        OutlinedButton(
-                          onPressed: () {},
-                          style: OutlinedButton.styleFrom(
-                            side: const BorderSide(color: Colors.white),
+                        if (currentUser == null) ...[
+                          const SizedBox(width: 8),
+                          OutlinedButton(
+                            onPressed: () {
+                              // Xử lý đăng ký ở đây
+                            },
+                            style: OutlinedButton.styleFrom(
+                              side: const BorderSide(color: Colors.white),
+                            ),
+                            child: const Text("Đăng kí", style: TextStyle(color: Colors.white)),
                           ),
-                          child: const Text("Đăng kí", style: TextStyle(color: Colors.white)),
-                        ),
+                        ],
                       ],
                     )
                   ],
@@ -134,135 +165,145 @@ class BuildingListScreen extends StatelessWidget {
               ],
             ),
           ),
-        Expanded(child: 
-        StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance.collection('buildings').snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return const Center(child: Text("Không có dữ liệu."));
-          }
+        Expanded(
+          child: StreamBuilder<QuerySnapshot>(
+            stream: FirebaseFirestore.instance
+                .collection('buildings')
+                // .where('managerId', isEqualTo: currentUser.id) // Lọc theo managerId
+                .snapshots(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                return const Center(child: Text("Không có dữ liệu."));
+              }
 
-          final buildings = snapshot.data!.docs;
+              final buildings = snapshot.data!.docs;
 
-          return ListView.builder(
-            itemCount: buildings.length,
-            itemBuilder: (context, index) {
-              final data = buildings[index].data() as Map<String, dynamic>;
+              return ListView.builder(
+                itemCount: buildings.length,
+                itemBuilder: (context, index) {
+                  final data = buildings[index].data() as Map<String, dynamic>;
 
-              return Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Card(
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  elevation: 4,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Stack(
+                  return Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Card(
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      elevation: 4,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          ClipRRect(
-                            borderRadius: const BorderRadius.only(
-                                topLeft: Radius.circular(12), topRight: Radius.circular(12)),
-                            child: CachedNetworkImage(
-                              imageUrl: data['imageUrls']?[0] ?? '',
-                              height: 180,
-                              width: double.infinity,
-                              fit: BoxFit.cover,
-                              placeholder: (context, url) => Container(
-                                height: 180,
-                                color: Colors.grey[300],
-                                child: const Center(child: CircularProgressIndicator()),
+                          Stack(
+                            children: [
+                              ClipRRect(
+                                borderRadius: const BorderRadius.only(
+                                  topLeft: Radius.circular(12),
+                                  topRight: Radius.circular(12),
+                                ),
+                                child: CachedNetworkImage(
+                                  imageUrl: data['imageUrls']?[0] ?? '',
+                                  height: 180,
+                                  width: double.infinity,
+                                  fit: BoxFit.cover,
+                                  placeholder: (context, url) => Container(
+                                    height: 180,
+                                    color: Colors.grey[300],
+                                    child: const Center(child: CircularProgressIndicator()),
+                                  ),
+                                  errorWidget: (context, url, error) => const Icon(Icons.error),
+                                ),
                               ),
-                              errorWidget: (context, url, error) => const Icon(Icons.error),
-                            ),
-                          ),
-                          Positioned(
-                            top: 8,
-                            right: 8,
-                            child: CircleAvatar(
-                              backgroundColor: Colors.white,
-                              child: IconButton(
-                                icon: const Icon(Icons.favorite_border),
-                                onPressed: () {},
-                              ),
-                            ),
-                          )
-                        ],
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.all(12.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              data['buildingName'] ?? 'Tên không xác định',
-                              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                            ),
-                            const SizedBox(height: 4),
-                            Row(
-                              children: [
-                                const Icon(Icons.location_on, size: 16, color: Colors.grey),
-                                const SizedBox(width: 4),
-                                Expanded(
-                                  child: Text(
-                                    data['address'] ?? '',
-                                    style: const TextStyle(color: Colors.grey),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
+                              Positioned(
+                                top: 8,
+                                right: 8,
+                                child: CircleAvatar(
+                                  backgroundColor: Colors.white,
+                                  child: IconButton(
+                                    icon: const Icon(Icons.favorite_border),
+                                    onPressed: () {},
                                   ),
                                 ),
-                              ],
-                            ),
-                            const SizedBox(height: 4),
-                            Row(
+                              )
+                            ],
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.all(12.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Icon(Icons.access_time, size: 16, color: Colors.grey),
-                                const SizedBox(width: 4),
-                                Text("05:00 - 22:00"),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
+                                Text(
+                                  data['buildingName'] ?? 'Tên không xác định',
+                                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                                ),
+                                const SizedBox(height: 4),
                                 Row(
                                   children: [
-                                    RatingBarIndicator(
-                                      rating: 4.5, // hoặc data['rating']
-                                      itemBuilder: (context, index) => const Icon(Icons.star, color: Colors.amber),
-                                      itemCount: 5,
-                                      itemSize: 20.0,
-                                      direction: Axis.horizontal,
-                                    ),
+                                    const Icon(Icons.location_on, size: 16, color: Colors.grey),
                                     const SizedBox(width: 4),
-                                    const Text("4.5"),
+                                    Expanded(
+                                      child: Text(
+                                        data['address'] ?? '',
+                                        style: const TextStyle(color: Colors.grey),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
                                   ],
                                 ),
-                                ElevatedButton(
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.amber,
-                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                  ),
-                                  onPressed: () {
-                                    // xử lý đặt lịch
-                                  },
-                                  child: const Text('ĐẶT LỊCH'),
+                                const SizedBox(height: 4),
+                                Row(
+                                  children: [
+                                    const Icon(Icons.access_time, size: 16, color: Colors.grey),
+                                    const SizedBox(width: 4),
+                                    Text("05:00 - 22:00"),
+                                  ],
                                 ),
+                                const SizedBox(height: 8),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    ElevatedButton(
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.amber,
+                                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                      ),
+                                      onPressed: () {
+                                        // xử lý đặt lịch
+                                            if (currentUser == null) {
+                                              // Hiển thị thông báo nếu user null
+                                              ScaffoldMessenger.of(context).showSnackBar(
+                                                const SnackBar(content: Text('Vui lòng đăng nhập trước khi xem danh sách phòng')),
+                                              );
+                                              return;
+                                            }
+                                            
+                                        
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) => RoomListScreen_User(buildingId: buildings[index].id,  userId: currentUser!.id,    sdt: currentUser!.phoneNumber ?? 'Chưa có SĐT',),
+                                          ),
+                                        );
+                                      },
+                                      
+                                      child: Text('Xem danh sách phòng'),
+                                    ),
+                                    
+                                  ],
+                                )
                               ],
-                            )
-                          ],
-                        ),
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                ),
+                    ),
+                  );
+                },
               );
             },
-          );
-        },
-      ),)
+          ),
+        )
       ],
       
       ),
