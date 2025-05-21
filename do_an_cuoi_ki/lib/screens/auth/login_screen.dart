@@ -1,14 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:do_an_cuoi_ki/screens/owner/add_room_screen.dart';
-import 'package:do_an_cuoi_ki/screens/owner/building_list.dart';
+
 import 'package:do_an_cuoi_ki/screens/owner/owner_main_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../models/user.dart';
 import '../../models/user_role.dart';
-import 'package:do_an_cuoi_ki/models/room.dart';
-import 'package:do_an_cuoi_ki/screens/user/near_room.dart';
-import '../user/main_screen.dart';
+
 
 class LoginPage extends StatefulWidget {
   const LoginPage({Key? key}) : super(key: key);
@@ -104,20 +101,8 @@ class _LoginPageState extends State<LoginPage> {
   void _navigateBasedOnRole(UserModel user) {
     switch (user.role) {
       case UserRole.customer:
-        // Giả sử allRooms, userLat, userLng đã được lấy từ Firestore hoặc nhập thủ công
-      final List<RoomModel> allRooms = []; // Thay bằng dữ liệu thực tế
-      final double userLat = 10.7769; // Vĩ độ ví dụ (Hà Nội)
-      final double userLng = 106.7009; // Kinh độ ví dụ (Hà Nội)
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => NearbyRoomsScreen(
-            allRooms: allRooms,
-            userLat: userLat,
-            userLng: userLng,
-          ),
-        ),
-      );
+
+      Navigator.pop(context, user); // trả dữ liệu về
       break;
       case UserRole.owner:
         Navigator.push(

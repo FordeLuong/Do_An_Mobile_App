@@ -54,6 +54,7 @@ class RoomModel {
   final RoomStatus status; // Trạng thái của phòng (còn trống, đã thuê,...)
   final DateTime createdAt; // Thời gian đăng tin
   final DateTime? updatedAt; // Thời gian cập nhật cuối cùng (có thể null)
+  final double sodien;
 
   RoomModel({
     required this.id,
@@ -72,6 +73,7 @@ class RoomModel {
     required this.status,
     required this.createdAt,
     this.updatedAt,
+    this.sodien=0,
   });
 
   /// Hàm tạo RoomModel từ một Map
@@ -107,6 +109,8 @@ class RoomModel {
               : null // Tạm thời
             )
           : null,
+      sodien: json['sodien'] as double? ?? 0,
+
     );
   }
 
@@ -130,6 +134,7 @@ class RoomModel {
       'status': status.toJson(),
       'createdAt': createdAt.toIso8601String(), // Hoặc FieldValue.serverTimestamp()
       'updatedAt': updatedAt?.toIso8601String(), // Hoặc FieldValue.serverTimestamp() nếu cập nhật
+      'sodien' : sodien
     };
   }
 
@@ -151,6 +156,7 @@ class RoomModel {
     RoomStatus? status,
     DateTime? createdAt,
     DateTime? updatedAt,
+    double? sodien,
   }) {
     return RoomModel(
       id: id ?? this.id,
@@ -169,6 +175,7 @@ class RoomModel {
       status: status ?? this.status,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      sodien: sodien ?? this.sodien,
     );
   }
 }
