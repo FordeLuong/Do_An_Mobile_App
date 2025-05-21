@@ -1,138 +1,179 @@
-// File: models/bill.dart
+// File: models/electricity_bill.dart
 
-import 'bill_type.dart'; // Import enum BillType
-import 'bill_status.dart'; // Import enum BillStatus
+// Enum định nghĩa trạng thái thanh toán
+enum PaymentStatus {
+  paid,       // Đã thanh toán
+  pending,    // Chờ thanh toán
+  overdue     // Quá hạn thanh toán
+}
 
-/// Class đại diện cho thông tin một hóa đơn
+// Extension cho PaymentStatus để chuyển đổi sang/từ JSON
+extension PaymentStatusExtension on PaymentStatus {
+  String toJson() {
+    switch (this) {
+      case PaymentStatus.paid:
+        return 'paid';
+      case PaymentStatus.pending:
+        return 'pending';
+      case PaymentStatus.overdue:
+        return 'overdue';
+    }
+  }
+
+  static PaymentStatus fromJson(String json) {
+    switch (json.toLowerCase()) {
+      case 'paid':
+        return PaymentStatus.paid;
+      case 'pending':
+        return PaymentStatus.pending;
+      case 'overdue':
+        return PaymentStatus.overdue;
+      default:
+        return PaymentStatus.pending; // Mặc định là chờ thanh toán
+    }
+  }
+}
+
 class BillModel {
-  final String id; // ID duy nhất của hóa đơn
-  final String contractId; // ID của hợp đồng liên quan (liên kết với ContractModel)
-  final String roomId; // ID của phòng trọ (để tiện truy vấn, liên kết với RoomModel)
-  final String tenantId; // ID của người thuê chịu trách nhiệm thanh toán (liên kết với UserModel)
-  final String ownerId; // ID của chủ trọ / người tạo hóa đơn
-  final BillType type; // Loại hóa đơn (điện, nước, thuê nhà,...)
-  final double amount; // Số tiền cần thanh toán
-  final DateTime issueDate; // Ngày phát hành hóa đơn
-  final DateTime dueDate; // Ngày đến hạn thanh toán
-  final DateTime? paidDate; // Ngày thanh toán (null nếu chưa thanh toán)
-  final BillStatus status; // Trạng thái hóa đơn (chờ thanh toán, đã thanh toán, quá hạn)
-  final String? description; // Mô tả thêm cho hóa đơn (ví dụ: "Tiền điện tháng 5/2025")
-  final String? paymentMethod; // Phương thức thanh toán (ví dụ: "Chuyển khoản", "Tiền mặt")
-  final String? transactionId; // Mã giao dịch nếu có
-  final DateTime createdAt; // Thời gian tạo hóa đơn
-  final DateTime? updatedAt; // Thời gian cập nhật cuối cùng
+  final String id;
+  final String roomId;
+  final String ownerId;
+  final String khachThueId;
+  final int sodienCu;
+  final int sodienMoi;
+  final int soNguoi;
+  final double priceRoom;
+  final double priceDien;
+  final double priceWater;
+  final double amenitiesPrice;
+  final DateTime date;
+  final String thangNam;
+  final double sumPrice;
+  final PaymentStatus status; // Trạng thái thanh toán
 
   BillModel({
     required this.id,
-    required this.contractId,
     required this.roomId,
-    required this.tenantId,
     required this.ownerId,
-    required this.type,
-    required this.amount,
-    required this.issueDate,
-    required this.dueDate,
-    this.paidDate,
-    required this.status,
-    this.description,
-    this.paymentMethod,
-    this.transactionId,
-    required this.createdAt,
-    this.updatedAt,
+    required this.khachThueId,
+    required this.sodienCu,
+    required this.sodienMoi,
+    required this.soNguoi,
+    required this.priceRoom,
+    required this.priceDien,
+    required this.priceWater,
+    required this.amenitiesPrice,
+    required this.date,
+    required this.thangNam,
+    required this.sumPrice,
+    this.status = PaymentStatus.pending, // Mặc định là chờ thanh toán
   });
 
-  /// Hàm tạo BillModel từ một Map
+  // Phương thức tính tiền điện
+  double get tienDien => (sodienMoi - sodienCu) * priceDien;
+
+  // Phương thức tính tiền nước
+  double get tienNuoc => priceWater * soNguoi;
+
+  // Phương thức tính tổng tiền
+  double get tinhTongTien => tienDien + tienNuoc + priceRoom + amenitiesPrice;
+
+  /// Hàm tạo từ Map (JSON)
   factory BillModel.fromJson(Map<String, dynamic> json) {
-    return BillModel(
+    final model = BillModel(
       id: json['id'] as String? ?? '',
-      contractId: json['contractId'] as String? ?? '',
       roomId: json['roomId'] as String? ?? '',
-      tenantId: json['tenantId'] as String? ?? '',
       ownerId: json['ownerId'] as String? ?? '',
-      type: BillTypeExtension.fromJson(json['type'] as String? ?? 'other'),
-      amount: (json['amount'] as num?)?.toDouble() ?? 0.0,
-      issueDate: (json['issueDate'] != null)
-          ? DateTime.parse(json['issueDate'] as String)
+      khachThueId: json['khachThueId'] as String? ?? '',
+      sodienCu: json['sodienCu'] as int? ?? 0,
+      sodienMoi: json['sodienMoi'] as int? ?? 0,
+      soNguoi: json['soNguoi'] as int? ?? 0,
+      priceRoom: (json['priceRoom'] as num?)?.toDouble() ?? 0.0,
+      priceDien: (json['priceDien'] as num?)?.toDouble() ?? 0.0,
+      priceWater: (json['priceWater'] as num?)?.toDouble() ?? 0.0,
+      amenitiesPrice: (json['amenitiesPrice'] as num?)?.toDouble() ?? 0.0,
+      date: (json['date'] != null)
+          ? (json['date'] is String
+              ? DateTime.parse(json['date'] as String)
+              : DateTime.now())
           : DateTime.now(),
-      dueDate: (json['dueDate'] != null)
-          ? DateTime.parse(json['dueDate'] as String)
-          : DateTime.now().add(const Duration(days: 7)), // Mặc định 7 ngày sau ngày phát hành
-      paidDate: json['paidDate'] != null
-          ? DateTime.parse(json['paidDate'] as String)
-          : null,
-      status: BillStatusExtension.fromJson(json['status'] as String? ?? 'pending'),
-      description: json['description'] as String?,
-      paymentMethod: json['paymentMethod'] as String?,
-      transactionId: json['transactionId'] as String?,
-      createdAt: (json['createdAt'] != null)
-          ? DateTime.parse(json['createdAt'] as String)
-          : DateTime.now(),
-      updatedAt: json['updatedAt'] != null
-          ? DateTime.parse(json['updatedAt'] as String)
-          : null,
+      thangNam: json['thangNam'] as String? ?? '',
+      sumPrice: (json['sumPrice'] as num?)?.toDouble() ?? 0.0,
+      status: json['status'] != null 
+          ? PaymentStatusExtension.fromJson(json['status'] as String)
+          : PaymentStatus.pending,
     );
+    
+    // Nếu sumPrice = 0, tự động tính toán lại
+    if (model.sumPrice == 0) {
+      return model.copyWith(sumPrice: model.tinhTongTien);
+    }
+    return model;
   }
 
-  /// Hàm chuyển đổi BillModel thành một Map
+  /// Hàm chuyển đổi thành Map (JSON)
   Map<String, dynamic> toJson() {
     return {
       'id': id,
-      'contractId': contractId,
       'roomId': roomId,
-      'tenantId': tenantId,
       'ownerId': ownerId,
-      'type': type.toJson(),
-      'amount': amount,
-      'issueDate': issueDate.toIso8601String(),
-      'dueDate': dueDate.toIso8601String(),
-      'paidDate': paidDate?.toIso8601String(),
+      'khachThueId': khachThueId,
+      'sodienCu': sodienCu,
+      'sodienMoi': sodienMoi,
+      'soNguoi': soNguoi,
+      'priceRoom': priceRoom,
+      'priceDien': priceDien,
+      'priceWater': priceWater,
+      'amenitiesPrice': amenitiesPrice,
+      'date': date.toIso8601String(),
+      'thangNam': thangNam,
+      'sumPrice': sumPrice,
       'status': status.toJson(),
-      'description': description,
-      'paymentMethod': paymentMethod,
-      'transactionId': transactionId,
-      'createdAt': createdAt.toIso8601String(),
-      'updatedAt': updatedAt?.toIso8601String(),
     };
   }
 
-  /// Hàm copyWith
+  /// Hàm copyWith để tạo bản sao và cập nhật
   BillModel copyWith({
     String? id,
-    String? contractId,
     String? roomId,
-    String? tenantId,
     String? ownerId,
-    BillType? type,
-    double? amount,
-    DateTime? issueDate,
-    DateTime? dueDate,
-    DateTime? paidDate,
-    BillStatus? status,
-    String? description,
-    String? paymentMethod,
-    String? transactionId,
-    DateTime? createdAt,
-    DateTime? updatedAt,
-    bool setPaidDateToNull = false,
-    bool setUpdatedAtToNull = false,
+    String? khachThueId,
+    int? sodienCu,
+    int? sodienMoi,
+    int? soNguoi,
+    double? priceRoom,
+    double? priceDien,
+    double? priceWater,
+    double? amenitiesPrice,
+    DateTime? date,
+    String? thangNam,
+    double? sumPrice,
+    PaymentStatus? status,
   }) {
-    return BillModel(
+    final newModel = BillModel(
       id: id ?? this.id,
-      contractId: contractId ?? this.contractId,
       roomId: roomId ?? this.roomId,
-      tenantId: tenantId ?? this.tenantId,
       ownerId: ownerId ?? this.ownerId,
-      type: type ?? this.type,
-      amount: amount ?? this.amount,
-      issueDate: issueDate ?? this.issueDate,
-      dueDate: dueDate ?? this.dueDate,
-      paidDate: setPaidDateToNull ? null : (paidDate ?? this.paidDate),
+      khachThueId: khachThueId ?? this.khachThueId,
+      sodienCu: sodienCu ?? this.sodienCu,
+      sodienMoi: sodienMoi ?? this.sodienMoi,
+      soNguoi: soNguoi ?? this.soNguoi,
+      priceRoom: priceRoom ?? this.priceRoom,
+      priceDien: priceDien ?? this.priceDien,
+      priceWater: priceWater ?? this.priceWater,
+      amenitiesPrice: amenitiesPrice ?? this.amenitiesPrice,
+      date: date ?? this.date,
+      thangNam: thangNam ?? this.thangNam,
+      sumPrice: sumPrice ?? this.sumPrice,
       status: status ?? this.status,
-      description: description ?? this.description,
-      paymentMethod: paymentMethod ?? this.paymentMethod,
-      transactionId: transactionId ?? this.transactionId,
-      createdAt: createdAt ?? this.createdAt,
-      updatedAt: setUpdatedAtToNull ? null : (updatedAt ?? this.updatedAt),
     );
+    
+    // Nếu có thay đổi các thông số tính toán, tự động cập nhật sumPrice
+    if (sodienCu != null || sodienMoi != null || soNguoi != null ||
+        priceDien != null || priceWater != null || 
+        priceRoom != null || amenitiesPrice != null) {
+      return newModel.copyWith(sumPrice: newModel.tinhTongTien);
+    }
+    return newModel;
   }
 }

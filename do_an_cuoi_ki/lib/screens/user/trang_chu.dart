@@ -1,26 +1,28 @@
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:do_an_cuoi_ki/models/user.dart';
-import 'package:do_an_cuoi_ki/screens/owner/add_room_for_building.dart';
-import 'package:do_an_cuoi_ki/screens/owner/room_list_screen.dart';
+import 'package:do_an_cuoi_ki/screens/auth/login_screen.dart';
+import 'package:do_an_cuoi_ki/screens/auth/register_screen.dart';
+
+import 'package:do_an_cuoi_ki/screens/user/room_list_screen_user.dart';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:flutter_rating_bar/flutter_rating_bar.dart';
+import 'package:intl/intl.dart';
+class TrangChu extends StatelessWidget {
+  UserModel? currentUser;
+  final Function(UserModel?) onUserUpdated;
+  TrangChu({super.key, required this.currentUser, required this.onUserUpdated});
+  String formattedDate = DateFormat('dd/MM/yyyy').format(DateTime.now());
+  
 
-class BuildingListScreen_2 extends StatelessWidget {
-  const BuildingListScreen_2({super.key, required this.currentUser});
-  final UserModel currentUser;
+
+  
+
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context)  {
     return Scaffold(
       backgroundColor: Colors.white,
-      // appBar: AppBar(
-      //   title: const Text("Sân gần bạn"),
-      //   backgroundColor: Colors.green.shade800,
-      //   actions: [
-      //     IconButton(onPressed: () {}, icon: const Icon(Icons.search)),
-      //   ],
-      // ),
       body: Column(
         children: [
 
@@ -36,10 +38,47 @@ class BuildingListScreen_2 extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      currentUser.name,
+                      formattedDate,
                       style: const TextStyle(color: Colors.white, fontSize: 14),
                     ),
-                    
+                    Row(
+                      children: [
+                        ElevatedButton(
+                          onPressed: currentUser == null 
+                              ? () async {
+                                  final result = await Navigator.push(
+                                    context,
+                                    MaterialPageRoute(builder: (context) => LoginPage()),
+                                  );
+                                  if (result != null && result is UserModel) {
+                                    
+                                      onUserUpdated(result);
+                                    
+                                  }
+                                }
+                              : null, // Vô hiệu hóa khi có user
+                          style: ElevatedButton.styleFrom(backgroundColor: Colors.white),
+                          child: currentUser == null
+                              ? const Text('Đăng nhập', style: TextStyle(color: Colors.black))
+                              : Text(
+                                  'Xin chào, ${currentUser!.name}',
+                                  style: const TextStyle(color: Colors.black),
+                                ),
+                        ),
+                        if (currentUser == null) ...[
+                          const SizedBox(width: 8),
+                          OutlinedButton(
+                            onPressed: () {
+                              // Xử lý đăng ký ở đây
+                            },
+                            style: OutlinedButton.styleFrom(
+                              side: const BorderSide(color: Colors.white),
+                            ),
+                            child: const Text("Đăng kí", style: TextStyle(color: Colors.white)),
+                          ),
+                        ],
+                      ],
+                    )
                   ],
                 ),
                 const SizedBox(height: 8),
@@ -62,14 +101,52 @@ class BuildingListScreen_2 extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 8),
-                    
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(30),
+                      ),
+                      child: IconButton(
+                        icon: const Icon(Icons.favorite_border),
+                        onPressed: () {},
+                      ),
+                    ),
                   ],
                 ),
               ],
             ),
           ),
 
+          // PHẦN TAB FILTER NGANG
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+            child: Row(
+              children: [
+                _buildFilterChip("Xe vé gần tôi"),
+                _buildFilterChip("Pickleball gần tôi"),
+                _buildFilterChip("Cầu lông gần tôi"),
+              ],
+            ),
+          ),
 
+          // DANH MỤC THỂ THAO
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: Row(
+              children: [
+                _buildSportIcon("Pickleball", Icons.sports_tennis),
+                _buildSportIcon("Cầu lông", Icons.sports),
+                _buildSportIcon("Bóng đá", Icons.sports_soccer),
+                _buildSportIcon("Tennis", Icons.sports_tennis_outlined),
+                _buildSportIcon("B.Chuyền", Icons.sports_volleyball),
+                _buildSportIcon("Bóng rổ", Icons.sports_basketball),
+              ],
+            ),
+          ),
+
+          // DÒNG GỢI Ý THÊM BỘ LỌC
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
             child: Row(
@@ -87,7 +164,7 @@ class BuildingListScreen_2 extends StatelessWidget {
           child: StreamBuilder<QuerySnapshot>(
             stream: FirebaseFirestore.instance
                 .collection('buildings')
-                .where('managerId', isEqualTo: currentUser.id) // Lọc theo managerId
+                // .where('managerId', isEqualTo: currentUser.id) // Lọc theo managerId
                 .snapshots(),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
@@ -188,52 +265,28 @@ class BuildingListScreen_2 extends StatelessWidget {
                                       ),
                                       onPressed: () {
                                         // xử lý đặt lịch
+                                            if (currentUser == null) {
+                                              // Hiển thị thông báo nếu user null
+                                              ScaffoldMessenger.of(context).showSnackBar(
+                                                const SnackBar(content: Text('Vui lòng đăng nhập trước khi xem danh sách phòng')),
+                                              );
+                                              return;
+                                            }
+                                            
                                         
                                         Navigator.push(
                                           context,
                                           MaterialPageRoute(
-                                            builder: (_) => RoomListScreen(buildingId: buildings[index].id,ownerID: currentUser.id,),
+                                            builder: (_) => RoomListScreen_User(buildingId: buildings[index].id,  userId: currentUser!.id,    sdt: currentUser!.phoneNumber ?? 'Chưa có SĐT',userName:currentUser!.name),
                                           ),
                                         );
                                       },
                                       
                                       child: Text('Xem danh sách phòng'),
                                     ),
-                                    ElevatedButton(
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.amber,
-                                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                      ),
-                                      onPressed: () {
-                                        // xử lý đặt lịch
-                                        
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (_) => CreateRoomPage(buildingId: buildings[index].id),
-                                          ),
-                                        );
-                                      },
-                                      
-                                      child: Text('Tạo Phòng'),
-                                    ),
+                                    
                                   ],
-                                ),
-                                Row(
-                                  children: [
-                                    ElevatedButton(
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: const Color.fromARGB(255, 84, 139, 227),
-                                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                      ),
-                                      onPressed: () {
-
-                                      },
-                                      child: Text('Báo Phí',style: TextStyle(color: Colors.yellowAccent),),
-                                    ),
-                                  ],
-
-                                ),
+                                )
                               ],
                             ),
                           ),
@@ -246,22 +299,37 @@ class BuildingListScreen_2 extends StatelessWidget {
             },
           ),
         )
-
       ],
       
       ),
-      // bottomNavigationBar: BottomNavigationBar(
-      //   type: BottomNavigationBarType.fixed,
-      //   selectedItemColor: const Color.fromARGB(255, 186, 203, 91),
-      //   backgroundColor: Colors.green.shade800,
-      //   items: const [
-      //     BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Trang chủ'),
-      //     BottomNavigationBarItem(icon: Icon(Icons.map), label: 'Bản đồ'),
-      //     BottomNavigationBarItem(icon: Icon(Icons.star), label: 'Tạo trọ mới'),
-      //     BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Tài khoản'),
-      //   ],
-      // ),
+      
     );
   }
 }
+Widget _buildFilterChip(String label) {
+  return Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 4),
+    child: Chip(
+      label: Text(label),
+      backgroundColor: Colors.grey.shade200,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+    ),
+  );
+}
 
+Widget _buildSportIcon(String label, IconData icon) {
+  return Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 8),
+    child: Column(
+      children: [
+        CircleAvatar(
+          radius: 24,
+          backgroundColor: Colors.white,
+          child: Icon(icon, color: Colors.green.shade800),
+        ),
+        const SizedBox(height: 4),
+        Text(label, style: const TextStyle(fontSize: 12)),
+      ],
+    ),
+  );
+}

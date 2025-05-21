@@ -110,6 +110,7 @@ class _ContractFormPageState extends State<ContractFormPage> {
         final roomRef = _firestore.collection('rooms').doc(widget.roomId);
         batch.update(roomRef, {
           'status': 'rented',
+          'ownerId':_selectedTenantId,
           'updatedAt': DateTime.now().toIso8601String(),
         });
         await batch.commit();
