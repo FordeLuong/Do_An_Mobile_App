@@ -282,7 +282,7 @@ class _MainScreenState extends State<BuildingListScreen> {
                                         Navigator.push(
                                           context,
                                           MaterialPageRoute(
-                                            builder: (_) => RoomListScreen_User(buildingId: buildings[index].id,  userId: currentUser!.id,    sdt: currentUser!.phoneNumber ?? 'Chưa có SĐT',),
+                                            builder: (_) => RoomListScreen_User(buildingId: buildings[index].id,  userId: currentUser!.id,    sdt: currentUser!.phoneNumber ?? 'Chưa có SĐT',userName:currentUser!.name),
                                           ),
                                         );
                                       },

@@ -7,7 +7,8 @@ class RoomListScreen_User extends StatelessWidget {
   final String buildingId;
   final String userId;
   final String sdt;
-  const RoomListScreen_User({super.key, required this.buildingId, required this.userId, required this.sdt});
+  final String userName;
+  const RoomListScreen_User({super.key, required this.buildingId, required this.userId, required this.sdt, required this.userName});
 
 
   void showCreateRequestDialog(BuildContext context, String buildingId, String userId) {
@@ -62,7 +63,8 @@ class RoomListScreen_User extends StatelessWidget {
                   roomId: buildingId,
                   userKhachId: userId,
                   thoiGian: DateTime.now(),
-                  sdt: sdt
+                  sdt: sdt,
+                  Name: userName
                 );
 
                 try {

@@ -1,10 +1,12 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:do_an_cuoi_ki/screens/owner/lap_hop_dong.dart';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
 class RoomListScreen extends StatelessWidget {
   final String buildingId;
-  const RoomListScreen({super.key, required this.buildingId});
+  final ownerID;
+  const RoomListScreen({super.key, required this.buildingId, required this.ownerID});
 
   
 
@@ -149,23 +151,26 @@ class RoomListScreen extends StatelessWidget {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                               children: [
+                                
                                 ElevatedButton(
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.amber,
-                                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                      ),
-                                      onPressed: () {
-                                        // xử lý đặt lịch
-                                        
-                                        // Navigator.push(
-                                        //   context,
-                                        //   MaterialPageRoute(
-                                        //     builder: (_) => CreateRoomPage(buildingId: buildings[index].id),
-                                        //   ),
-                                        // );
-                                      },
-                                      
-                                      child: Text('Lập hợp đồng'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: data['status'] == 'rented' ? Colors.grey : Colors.amber,
+                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                  ),
+                                  onPressed: data['status'] == 'rented' 
+                                      ? null 
+                                      : () {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) => ContractFormPage(
+                                                roomId: rooms[index].id,
+                                                ownerId: ownerID,
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                  child: Text('Lập hợp đồng'),
                                 ),
                                 ElevatedButton(
                                       style: ElevatedButton.styleFrom(
@@ -251,6 +256,7 @@ class RequestDialog extends StatelessWidget {
               itemCount: localDocs.length,
               itemBuilder: (context, index) {
                 final data = localDocs[index].data() as Map<String, dynamic>;
+                final name= data['Name'] ?? '';
                 final loai = data['loai_request'] ?? 'Không rõ';
                 final moTa = data['mo_ta'] ?? '';
                 final thoiGian = data['thoi_gian'] != null
@@ -263,6 +269,7 @@ class RequestDialog extends StatelessWidget {
                   subtitle: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      Text(name),
                       Text(moTa),
                       if (thoiGian != null)
                         Text(

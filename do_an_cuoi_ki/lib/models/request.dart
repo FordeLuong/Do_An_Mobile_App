@@ -44,6 +44,7 @@ class RequestModel {
   final String userKhachId;
   final DateTime thoiGian;
   final String sdt;
+  final String Name;
 
   RequestModel({
     required this.id,
@@ -53,6 +54,7 @@ class RequestModel {
     required this.userKhachId,
     required this.thoiGian,
     required this.sdt,
+    required this.Name
   });
 
   /// Tạo từ JSON
@@ -67,6 +69,7 @@ class RequestModel {
           ? DateTime.parse(json['thoi_gian'] as String)
           : DateTime.now(),
       sdt: json['sdt'] as String? ?? '',
+      Name: json['Name'] as String? ?? '',
     );
   }
 
@@ -80,6 +83,7 @@ class RequestModel {
       'user_khach_id': userKhachId,
       'thoi_gian': thoiGian.toIso8601String(),
       'sdt': sdt,
+      'Name':Name
     };
   }
 
@@ -92,6 +96,7 @@ class RequestModel {
     String? userKhachId,
     DateTime? thoiGian,
     String? sdt,
+    String? Name
   }) {
     return RequestModel(
       id: id ?? this.id,
@@ -101,6 +106,7 @@ class RequestModel {
       userKhachId: userKhachId ?? this.userKhachId,
       thoiGian: thoiGian ?? this.thoiGian,
       sdt: sdt ?? this.sdt,
+      Name: Name ?? this.Name
     );
   }
 }

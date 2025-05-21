@@ -87,6 +87,7 @@ class _CreateRoomPageState extends State<CreateRoomPage> {
         status: RoomStatus.available,
         createdAt: DateTime.now(),
         updatedAt: null,
+        sodien: 0,
       );
 
       await FirebaseFirestore.instance.collection('rooms').doc(roomId).set(room.toJson());
