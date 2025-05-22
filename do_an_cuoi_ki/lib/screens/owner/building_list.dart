@@ -193,7 +193,7 @@ class BuildingListScreen_2 extends StatelessWidget {
                                         Navigator.push(
                                           context,
                                           MaterialPageRoute(
-                                            builder: (_) => RoomListScreen(buildingId: buildings[index].id,ownerID: currentUser.id,),
+                                            builder: (_) => RoomListScreen(buildingId: buildings[index].id,ownerID: currentUser.id,currentUser: currentUser,),
                                           ),
                                         );
                                       },

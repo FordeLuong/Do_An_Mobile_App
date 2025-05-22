@@ -1,12 +1,15 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:do_an_cuoi_ki/models/user.dart';
 import 'package:do_an_cuoi_ki/screens/owner/lap_hop_dong.dart';
+import 'package:do_an_cuoi_ki/screens/owner/thanh_ly_hop_dong.dart';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
 class RoomListScreen extends StatelessWidget {
   final String buildingId;
   final ownerID;
-  const RoomListScreen({super.key, required this.buildingId, required this.ownerID});
+  final UserModel currentUser;
+  const RoomListScreen({super.key, required this.buildingId, required this.ownerID, required this.currentUser});
 
   
 
@@ -179,14 +182,15 @@ class RoomListScreen extends StatelessWidget {
                                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                                       ),
                                       onPressed: () {
-                                        // xử lý đặt lịch
-                                        
-                                        // Navigator.push(
-                                        //   context,
-                                        //   MaterialPageRoute(
-                                        //     builder: (_) => CreateRoomPage(buildingId: buildings[index].id),
-                                        //   ),
-                                        // );
+                                        Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) => ThanhLyHopDong(
+                                                currentUser: currentUser,
+                                                roomId: rooms[index].id,
+                                              ),
+                                            ),
+                                          );
                                       },
                                       
                                       child: Text('Thanh lý'),
