@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:do_an_cuoi_ki/models/user.dart';
 import 'package:do_an_cuoi_ki/screens/owner/add_room_for_building.dart';
+import 'package:do_an_cuoi_ki/screens/owner/lap_hoa_don_hang_thang.dart';
 import 'package:do_an_cuoi_ki/screens/owner/room_list_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -205,7 +206,7 @@ class BuildingListScreen_2 extends StatelessWidget {
                                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                                       ),
                                       onPressed: () {
-                                        // xử lý đặt lịch
+                                        
                                         
                                         Navigator.push(
                                           context,
@@ -227,7 +228,12 @@ class BuildingListScreen_2 extends StatelessWidget {
                                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                                       ),
                                       onPressed: () {
-
+                                          Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) => BillManagementScreen(currentUser: currentUser,),
+                                          ),
+                                        );
                                       },
                                       child: Text('Báo Phí',style: TextStyle(color: Colors.yellowAccent),),
                                     ),
