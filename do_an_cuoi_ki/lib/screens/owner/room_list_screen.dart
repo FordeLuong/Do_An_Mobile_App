@@ -1,6 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:do_an_cuoi_ki/models/user.dart';
 import 'package:do_an_cuoi_ki/screens/owner/lap_hop_dong.dart';
+import 'package:do_an_cuoi_ki/screens/owner/sua_chua.dart';
+import 'package:do_an_cuoi_ki/screens/owner/sua_chua_2.dart';
 import 'package:do_an_cuoi_ki/screens/owner/thanh_ly_hop_dong.dart';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -195,6 +197,7 @@ class RoomListScreen extends StatelessWidget {
                                       
                                       child: Text('Thanh lý'),
                                 ),
+                                
                                 IconButton(
                                   icon: const Icon(Icons.edit, color: Colors.blue),
                                   onPressed: () {
@@ -213,7 +216,25 @@ class RoomListScreen extends StatelessWidget {
                                 ),
                                 
                               ],
-                            )
+                            ),
+                            ElevatedButton(
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.amber,
+                                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                      ),
+                                      onPressed: () {
+                                        Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) => QuanLyPhieuSuaChuaScreen(
+                                                roomId: rooms[index].id,
+                                              ),
+                                            ),
+                                          );
+                                      },
+                                      
+                                      child: Text('Sửa Chữa'),
+                                ),
                           ],
                         ),
                       ),
@@ -250,6 +271,13 @@ class RequestDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     List<QueryDocumentSnapshot> localDocs = List.from(requestDocs); // Danh sách tạm
 
+
+    Future<void> markRequestAsProcessed(String requestId) async {
+      await FirebaseFirestore.instance
+          .collection('requests')
+          .doc(requestId)
+          .update({'status': 'processed'});
+    }
     return AlertDialog(
       title: const Text('Danh sách yêu cầu'),
       content: StatefulBuilder(
@@ -268,8 +296,12 @@ class RequestDialog extends StatelessWidget {
                     ? DateTime.parse(data['thoi_gian']).toLocal()
                     : null;
                 final sdt=data['sdt'];
+                final roomId =data['room_id'] ?? '';
+                final tenantId =data['user_khach_id'] ?? '';
+                final isSuaChua = loai == 'sua_chua'; // Kiểm tra loại yêu cầu
+
                 return ListTile(
-                  leading: const Icon(Icons.assignment),
+                  // leading: const Icon(Icons.assignment),
                   title: Text(loai),
                   subtitle: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -284,47 +316,83 @@ class RequestDialog extends StatelessWidget {
                       Text(sdt),
                     ],
                   ),
-                  trailing: IconButton(
-                    icon: const Icon(Icons.delete, color: Colors.red),
-                    onPressed: () async {
-                      final confirm = await showDialog<bool>(
-                        context: context,
-                        builder: (_) => AlertDialog(
-                          title: const Text('Xác nhận'),
-                          content: const Text('Bạn có chắc muốn xóa yêu cầu này không?'),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(context, false),
-                              child: const Text('Hủy'),
-                            ),
-                            TextButton(
-                              onPressed: () => Navigator.pop(context, true),
-                              child: const Text('Xóa'),
-                            ),
-                          ],
-                        ),
-                      );
+                  trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (isSuaChua) // Chỉ hiển thị nút xử lý nếu là sửa chữa
+                    IconButton(
+                      icon: const Icon(Icons.check_circle, color: Colors.green),
+                      onPressed: () async {
+                        final confirm = await showDialog<bool>(
+                          context: context,
+                          builder: (_) => AlertDialog(
+                            title: const Text('Xác nhận'),
+                            content: const Text('Bạn có chắc đã xử lý yêu cầu này?'),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context, false),
+                                child: const Text('Hủy'),
+                              ),
+                              TextButton(
+                                onPressed: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => SuaChua(
+                                      roomId: roomId,
+                                      tenantId: tenantId,
+                                    ),
+                                  ),
+                                ),
+                                child: const Text('Xác nhận'),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.delete, color: Colors.red),
+                      onPressed: () async {
+                        final confirm = await showDialog<bool>(
+                          context: context,
+                          builder: (_) => AlertDialog(
+                            title: const Text('Xác nhận'),
+                            content: const Text('Bạn có chắc muốn xóa yêu cầu này không?'),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context, false),
+                                child: const Text('Hủy'),
+                              ),
+                              TextButton(
+                                onPressed: () => Navigator.pop(context, true),
+                                child: const Text('Xóa'),
+                              ),
+                            ],
+                          ),
+                        );
 
-                      if (confirm == true) {
-                        await deleteRequestById(localDocs[index].id);
-                        setState(() {
-                          localDocs.removeAt(index);
-                        });
-                      }
-                    },
-                  ),
-                );
-              },
-            ),
-          );
-        },
+                        if (confirm == true) {
+                          await deleteRequestById(localDocs[index].id);
+                          setState(() {
+                            localDocs.removeAt(index);
+                          });
+                        }
+                      },
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        );
+      },
+    ),
+    actions: [
+      TextButton(
+        onPressed: () => Navigator.pop(context),
+        child: const Text('Đóng'),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Đóng'),
-        ),
-      ],
-    );
-  }
+    ],
+  );
+}
 }

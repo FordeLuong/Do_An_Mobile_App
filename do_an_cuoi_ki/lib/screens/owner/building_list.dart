@@ -231,7 +231,7 @@ class BuildingListScreen_2 extends StatelessWidget {
                                           Navigator.push(
                                           context,
                                           MaterialPageRoute(
-                                            builder: (_) => BillManagementScreen(currentUser: currentUser,),
+                                            builder: (_) => BillManagementScreen(currentUser: currentUser,buildingId: buildings[index].id,),
                                           ),
                                         );
                                       },
