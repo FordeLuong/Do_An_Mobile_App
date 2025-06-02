@@ -7,8 +7,9 @@ import 'package:intl/intl.dart';
 
 
 class BillManagementScreen extends StatefulWidget {
-  const BillManagementScreen({super.key,required this.currentUser});
+  const BillManagementScreen({super.key,required this.currentUser,required this.buildingId});
   final UserModel currentUser;
+  final String buildingId;
 
   @override
   _BillManagementScreenState createState() => _BillManagementScreenState();
@@ -18,11 +19,13 @@ class _BillManagementScreenState extends State<BillManagementScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   late UserModel currentUser;
+  late String buildingId;
   
   @override
   void initState() {
     super.initState();
     currentUser = widget.currentUser; 
+    buildingId = widget.buildingId;
     _tabController = TabController(length: 3, vsync: this);
   }
 
@@ -56,10 +59,10 @@ class _BillManagementScreenState extends State<BillManagementScreen>
           _buildUnbilledRoomsTab(currentUser),
           
           // Tab 2: Hóa đơn chờ thanh toán
-          _buildPendingBillsTab(),
+          _buildPendingBillsTab(buildingId),
           
           // Tab 3: Hóa đơn đã thanh toán
-          _buildPaidBillsTab(),
+          _buildPaidBillsTab(buildingId),
         ],
       ),
       floatingActionButton: FloatingActionButton(
@@ -165,12 +168,11 @@ class _BillManagementScreenState extends State<BillManagementScreen>
   );
 }
 
-  Widget _buildPendingBillsTab() {
+  Widget _buildPendingBillsTab(String? selectedBuildingId) {
   return StreamBuilder<QuerySnapshot>(
     stream: FirebaseFirestore.instance
         .collection('bills')
         .where('status', isEqualTo: 'pending') // Lọc các hóa đơn chờ thanh toán
-        // .orderBy('thangNam', descending: true) // Sắp xếp theo ngày mới nhất
         .snapshots(),
     builder: (context, snapshot) {
       if (snapshot.connectionState == ConnectionState.waiting) {
@@ -181,73 +183,83 @@ class _BillManagementScreenState extends State<BillManagementScreen>
         return const Center(child: Text('Không có hóa đơn chờ thanh toán'));
       }
 
-      final pendingBills = snapshot.data!.docs.map((doc) {
-        return BillModel.fromJson(doc.data() as Map<String, dynamic>);
-      }).toList();
+      // Lọc bills ngay trong builder thay vì trong stream
+      return FutureBuilder<List<DocumentSnapshot>>(
+        future: _filterBillsByBuilding(snapshot.data!.docs, selectedBuildingId),
+        builder: (context, filteredSnapshot) {
+          if (filteredSnapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-      return ListView.builder(
-        itemCount: pendingBills.length,
-        itemBuilder: (context, index) {
-          final bill = pendingBills[index];
-             return Card(
-      margin: const EdgeInsets.all(8.0),
-      child: ExpansionTile(
-        title: FutureBuilder<String?>(
-          future: getRoomTitleById(bill.roomId),
-          builder: (context, roomSnapshot) {
-            if (roomSnapshot.connectionState == ConnectionState.waiting) {
-              return const Text('Đang tải tên phòng...');
-            }
-            return Text('HĐ ${bill.thangNam} - Phòng ${roomSnapshot.data ?? 'Không xác định'}');
-          },
-        ),
-        subtitle: Text('Tổng: ${NumberFormat.currency(locale: 'vi').format(bill.sumPrice)}'),
-        children: [
-          // ... các widget con khác
-           Card(
-            margin: const EdgeInsets.all(8.0),
-            child: ExpansionTile( 
-              title: Text('Hóa Đơn'),
-              subtitle: Text('Thông tin hóa đơn :'),
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      _buildBillDetailRow('Tiền điện:', bill.tienDien),
-                      _buildBillDetailRow('Tiền nước:', bill.tienNuoc),
-                      _buildBillDetailRow('Tiền phòng:', bill.priceRoom),
-                      _buildBillDetailRow('Tiện ích khác:', bill.amenitiesPrice),
-                      const Divider(),
-                      _buildBillDetailRow('Tổng cộng:', bill.sumPrice, isTotal: true),
-                      const SizedBox(height: 10),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
+          final pendingBills = filteredSnapshot.data!.map((doc) {
+            return BillModel.fromJson(doc.data() as Map<String, dynamic>);
+          }).toList();
+
+          if (pendingBills.isEmpty) {
+            return const Center(child: Text('Không có hóa đơn chờ thanh toán cho tòa nhà này'));
+          }
+
+          return ListView.builder(
+            itemCount: pendingBills.length,
+            itemBuilder: (context, index) {
+              final bill = pendingBills[index];
+              return Card(
+                margin: const EdgeInsets.all(8.0),
+                child: ExpansionTile(
+                  title: FutureBuilder<String?>(
+                    future: getRoomTitleById(bill.roomId),
+                    builder: (context, roomSnapshot) {
+                      if (roomSnapshot.connectionState == ConnectionState.waiting) {
+                        return const Text('Đang tải tên phòng...');
+                      }
+                      return Text('HĐ ${bill.thangNam} - Phòng ${roomSnapshot.data ?? 'Không xác định'}');
+                    },
+                  ),
+                  subtitle: Text('Tổng: ${NumberFormat.currency(locale: 'vi').format(bill.sumPrice)}'),
+                  children: [
+                    Card(
+                      margin: const EdgeInsets.all(8.0),
+                      child: ExpansionTile(
+                        title: Text('Hóa Đơn'),
+                        subtitle: Text('Thông tin hóa đơn:'),
                         children: [
-                          TextButton(
-                            onPressed: () => _updateBillStatus(bill.id, PaymentStatus.paid),
-                            child: const Text('Đánh dấu đã thanh toán'),
+                          Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                _buildBillDetailRow('Tiền điện:', bill.tienDien),
+                                _buildBillDetailRow('Tiền nước:', bill.tienNuoc),
+                                _buildBillDetailRow('Tiền phòng:', bill.priceRoom),
+                                _buildBillDetailRow('Tiện ích khác:', bill.amenitiesPrice),
+                                const Divider(),
+                                _buildBillDetailRow('Tổng cộng:', bill.sumPrice, isTotal: true),
+                                const SizedBox(height: 10),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.end,
+                                  children: [
+                                    TextButton(
+                                      onPressed: () => _updateBillStatus(bill.id, PaymentStatus.paid),
+                                      child: const Text('Đánh dấu đã thanh toán'),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
                           ),
                         ],
                       ),
-                    ],
-                  ),
+                    )
+                  ],
                 ),
-              ],
-            ),
-          )
-        ],
-      ),
-    );
-          
-          
+              );
+            },
+          );
         },
       );
     },
   );
 }
-
 // Hàm cập nhật trạng thái hóa đơn
 void _updateBillStatus(String billId, PaymentStatus status) async {
   try {
@@ -280,12 +292,11 @@ String _getStatusText(PaymentStatus status) {
   }
 }
 
-  Widget _buildPaidBillsTab() {
-   return StreamBuilder<QuerySnapshot>(
+ Widget _buildPaidBillsTab(String? selectedBuildingId) {
+  return StreamBuilder<QuerySnapshot>(
     stream: FirebaseFirestore.instance
         .collection('bills')
-        .where('status', isEqualTo: 'paid') // Lọc các hóa đơn chờ thanh toán
-        // .orderBy('thangNam', descending: true) // Sắp xếp theo ngày mới nhất
+        .where('status', isEqualTo: 'paid')
         .snapshots(),
     builder: (context, snapshot) {
       if (snapshot.connectionState == ConnectionState.waiting) {
@@ -293,62 +304,75 @@ String _getStatusText(PaymentStatus status) {
       }
 
       if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-        return const Center(child: Text('Không có hóa đơn chờ thanh toán'));
+        return const Center(child: Text('Không có hóa đơn đã thanh toán'));
       }
 
-      final pendingBills = snapshot.data!.docs.map((doc) {
-        return BillModel.fromJson(doc.data() as Map<String, dynamic>);
-      }).toList();
+      // Lọc bills ngay trong builder thay vì trong stream
+      return FutureBuilder<List<DocumentSnapshot>>(
+        future: _filterBillsByBuilding(snapshot.data!.docs, selectedBuildingId),
+        builder: (context, filteredSnapshot) {
+          if (filteredSnapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-      return ListView.builder(
-        itemCount: pendingBills.length,
-        itemBuilder: (context, index) {
-          final bill = pendingBills[index];
-             return Card(
-      margin: const EdgeInsets.all(8.0),
-      child: ExpansionTile(
-        title: FutureBuilder<String?>(
-          future: getRoomTitleById(bill.roomId),
-          builder: (context, roomSnapshot) {
-            if (roomSnapshot.connectionState == ConnectionState.waiting) {
-              return const Text('Đang tải tên phòng...');
-            }
-            return Text('HĐ ${bill.thangNam} - Phòng ${roomSnapshot.data ?? 'Không xác định'}');
-          },
-        ),
-        subtitle: Text('Tổng: ${NumberFormat.currency(locale: 'vi').format(bill.sumPrice)}'),
-        children: [
-          // ... các widget con khác
-           Card(
-            margin: const EdgeInsets.all(8.0),
-            child: ExpansionTile( 
-              title: Text('Hóa Đơn'),
-              subtitle: Text('Thông tin hóa đơn :'),
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      _buildBillDetailRow('Tiền điện:', bill.tienDien),
-                      _buildBillDetailRow('Tiền nước:', bill.tienNuoc),
-                      _buildBillDetailRow('Tiền phòng:', bill.priceRoom),
-                      _buildBillDetailRow('Tiện ích khác:', bill.amenitiesPrice),
-                      const Divider(),
-                      _buildBillDetailRow('Tổng cộng:', bill.sumPrice, isTotal: true),
-                      const SizedBox(height: 10),
-                      
-                    ],
+          final paidBills = filteredSnapshot.data!.map((doc) {
+            return BillModel.fromJson(doc.data() as Map<String, dynamic>);
+          }).toList();
+
+          if (paidBills.isEmpty) {
+            return const Center(child: Text('Không có hóa đơn đã thanh toán cho tòa nhà này'));
+          }
+
+          return ListView.builder(
+            itemCount: paidBills.length,
+            itemBuilder: (context, index) {
+              final bill = paidBills[index];
+              return Card(
+                margin: const EdgeInsets.all(8.0),
+                child: ExpansionTile(
+                  title: FutureBuilder<String?>(
+                    future: getRoomTitleById(bill.roomId),
+                    builder: (context, roomSnapshot) {
+                      if (roomSnapshot.connectionState == ConnectionState.waiting) {
+                        return const Text('Đang tải tên phòng...');
+                      }
+                      return Text('HĐ ${bill.thangNam} - Phòng ${roomSnapshot.data ?? 'Không xác định'}');
+                    },
                   ),
+                  // ... Phần còn lại giữ nguyên
+                   subtitle: Text('Tổng: ${NumberFormat.currency(locale: 'vi').format(bill.sumPrice)}'),
+                    children: [
+                      // ... các widget con khác
+                      Card(
+                        margin: const EdgeInsets.all(8.0),
+                        child: ExpansionTile( 
+                          title: Text('Hóa Đơn'),
+                          subtitle: Text('Thông tin hóa đơn :'),
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.all(16.0),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  _buildBillDetailRow('Tiền điện:', bill.tienDien),
+                                  _buildBillDetailRow('Tiền nước:', bill.tienNuoc),
+                                  _buildBillDetailRow('Tiền phòng:', bill.priceRoom),
+                                  _buildBillDetailRow('Tiện ích khác:', bill.amenitiesPrice),
+                                  const Divider(),
+                                  _buildBillDetailRow('Tổng cộng:', bill.sumPrice, isTotal: true),
+                                  const SizedBox(height: 10),
+                                  
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    ],
                 ),
-              ],
-            ),
-          )
-        ],
-      ),
-    );
-          
-          
+              );
+            },
+          );
         },
       );
     },
@@ -627,4 +651,27 @@ Future<String?> getRoomTitleById(String roomId) async {
     print('Error fetching room title: $e');
     return null; // Trả về null nếu có lỗi
   }
+}
+
+
+
+Future<List<DocumentSnapshot>> _filterBillsByBuilding(
+    List<DocumentSnapshot> bills, String? buildingId) async {
+  if (buildingId == null) return bills;
+
+  // Lấy tất cả phòng thuộc building
+  final roomsQuery = await FirebaseFirestore.instance
+      .collection('rooms')
+      .where('buildingId', isEqualTo: buildingId)
+      .get();
+
+  if (roomsQuery.docs.isEmpty) return [];
+
+  final roomIds = roomsQuery.docs.map((doc) => doc.id).toList();
+  
+  // Lọc bills chỉ giữ lại những bill có roomId thuộc building
+  return bills.where((doc) {
+    final data = doc.data() as Map<String, dynamic>;
+    return roomIds.contains(data['roomId']);
+  }).toList();
 }
