@@ -7,7 +7,7 @@
   class QuanLyPhieuSuaChuaScreen extends StatefulWidget {
     final String roomId;
 
-    const QuanLyPhieuSuaChuaScreen({Key? key, required this.roomId}) : super(key: key);
+    const QuanLyPhieuSuaChuaScreen({super.key, required this.roomId});
 
     @override
     _QuanLyPhieuSuaChuaScreenState createState() => _QuanLyPhieuSuaChuaScreenState();
@@ -259,7 +259,7 @@ final List<DonViSuaChua> _DonViSuaChuaList = [];
                                     value: ncc,
                                     child: Text(ncc.ten),
                                   );
-                                }).toList(),
+                                }),
                               ],
                               onChanged: (value) {
                                 setState(() {
@@ -356,7 +356,7 @@ final List<DonViSuaChua> _DonViSuaChuaList = [];
                             ],
                           ),
                         );
-                      }).toList(),
+                      }),
                   ],
                 ),
               ),

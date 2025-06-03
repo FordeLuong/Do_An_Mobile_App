@@ -9,10 +9,10 @@ class ContractFormPage extends StatefulWidget {
   final String ownerId;
 
   const ContractFormPage({
-    Key? key,
+    super.key,
     required this.roomId,
     required this.ownerId,
-  }) : super(key: key);
+  });
 
   @override
   _ContractFormPageState createState() => _ContractFormPageState();

@@ -1,8 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:do_an_cuoi_ki/models/bill/bill.dart';
 import 'package:do_an_cuoi_ki/models/contract/contract.dart';
 import 'package:do_an_cuoi_ki/models/contract/contract_status.dart';
-import 'package:do_an_cuoi_ki/models/room.dart';
 import 'package:do_an_cuoi_ki/models/user.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -411,6 +409,7 @@ class _ThanhLyHopDongState extends State<ThanhLyHopDong>
                       .update({
                         'status': 'available',
                         'updatedAt': FieldValue.serverTimestamp(),
+                        'ownerId':'',
                       });
                   await FirebaseFirestore.instance
                       .collection('contracts')

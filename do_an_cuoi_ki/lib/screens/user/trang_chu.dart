@@ -14,11 +14,6 @@ class TrangChu extends StatelessWidget {
   TrangChu({super.key, required this.currentUser, required this.onUserUpdated});
   String formattedDate = DateFormat('dd/MM/yyyy').format(DateTime.now());
   
-
-
-  
-
-
   @override
   Widget build(BuildContext context)  {
     return Scaffold(

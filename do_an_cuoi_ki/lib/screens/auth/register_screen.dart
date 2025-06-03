@@ -7,7 +7,7 @@ import '../../models/user.dart';
 import '../../models/user_role.dart' show UserRole, UserRoleExtension;
 
 class RegisterPage extends StatefulWidget {
-  const RegisterPage({Key? key}) : super(key: key);
+  const RegisterPage({super.key});
 
   @override
   _RegisterPageState createState() => _RegisterPageState();

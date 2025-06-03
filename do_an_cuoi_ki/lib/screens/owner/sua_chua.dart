@@ -172,7 +172,7 @@ class _SuaChuaState extends State<SuaChua> with SingleTickerProviderStateMixin {
                                     value: ncc,
                                     child: Text(ncc.ten),
                                   );
-                                }).toList(),
+                                }),
                               ],
                               onChanged: (value) {
                                 setState(() {
@@ -254,7 +254,7 @@ class _SuaChuaState extends State<SuaChua> with SingleTickerProviderStateMixin {
                                     ],
                                   ),
                                 );
-                              }).toList(),
+                              }),
                           ],
                         ),
                       ),

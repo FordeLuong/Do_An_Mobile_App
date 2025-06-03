@@ -402,7 +402,7 @@ String _getStatusText(PaymentStatus status) {
     );
   }
 
-void _createBillForRoom(String roomId,String ownerID_forbill, String tenantId_forbill ,int sodien, int songuoi, double price) {
+void _createBillForRoom(String roomId,String owneridForbill, String tenantidForbill ,int sodien, int songuoi, double price) {
   final now = DateTime.now();
   final currentMonthYear = '${now.month.toString().padLeft(2, '0')}/${now.year}';
   
@@ -555,8 +555,8 @@ void _createBillForRoom(String roomId,String ownerID_forbill, String tenantId_fo
                   final newBill = BillModel(
                     id: DateTime.now().millisecondsSinceEpoch.toString(),
                     roomId: roomId,
-                    ownerId: ownerID_forbill, // Thay bằng ownerId thực tế
-                    khachThueId: tenantId_forbill, // Thay bằng tenantId thực tế
+                    ownerId: owneridForbill, // Thay bằng ownerId thực tế
+                    khachThueId: tenantidForbill, // Thay bằng tenantId thực tế
                     sodienCu: sodienCu,
                     sodienMoi: sodienMoi,
                     soNguoi: soNguoi,

@@ -11,7 +11,7 @@ void main() async {
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   void checkConnection() async {
-    bool isConnected = await Firebase.apps.isNotEmpty;
+    bool isConnected = Firebase.apps.isNotEmpty;
     print('FireBase connection : $isConnected');
   }
   checkConnection();

@@ -5,7 +5,6 @@ import 'package:do_an_cuoi_ki/screens/owner/lap_hoa_don_hang_thang.dart';
 import 'package:do_an_cuoi_ki/screens/owner/room_list_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 
 class BuildingListScreen_2 extends StatelessWidget {
   const BuildingListScreen_2({super.key, required this.currentUser});
