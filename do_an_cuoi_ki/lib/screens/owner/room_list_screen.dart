@@ -17,10 +17,13 @@ class RoomListScreen extends StatelessWidget {
   final String ownerID; // Giữ nguyên tên biến ownerID
   final UserModel currentUser;
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
   const RoomListScreen({super.key, required this.buildingId, required this.ownerID, required this.currentUser});
 
   
 =======
+=======
+>>>>>>> Stashed changes
 
   const RoomListScreen({
     super.key,
@@ -28,6 +31,9 @@ class RoomListScreen extends StatelessWidget {
     required this.ownerID,
     required this.currentUser,
   });
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
 
   @override
