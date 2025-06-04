@@ -6,8 +6,11 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 // Giả sử RoomStatus được định nghĩa trong models/room.dart
 // Bạn cần import nó nếu RoomStatus được sử dụng trong hàm kiểm tra (ví dụ: kiểm tra status của phòng)
+=======
+>>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
 =======
@@ -60,7 +63,10 @@ extension RequestTypeExtension on RequestType {
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
   // Hàm helper để lấy tên hiển thị đẹp hơn (tùy chọn)
+=======
+>>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
 =======
@@ -100,6 +106,9 @@ class RequestModel {
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
@@ -129,6 +138,7 @@ class RequestModel {
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
   DateTime _parseFirestoreDateTime(dynamic fieldValue) {
     if (fieldValue == null) return DateTime.now(); // Hoặc xử lý null theo cách khác
     if (fieldValue is Timestamp) return fieldValue.toDate(); // QUAN TRỌNG
@@ -136,6 +146,8 @@ class RequestModel {
     print("Warning: Unknown type for DateTime field, defaulting to now. Value: $fieldValue, Type: ${fieldValue.runtimeType}");
     return DateTime.now();
 =======
+=======
+>>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
 =======
@@ -201,7 +213,11 @@ class RequestModel {
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
       'thoi_gian': Timestamp.fromDate(thoiGian), // Lưu là Timestamp
+=======
+      'thoi_gian': thoiGian.toIso8601String(), // Vẫn lưu là String ISO 8601
+>>>>>>> Stashed changes
 =======
       'thoi_gian': thoiGian.toIso8601String(), // Vẫn lưu là String ISO 8601
 >>>>>>> Stashed changes
@@ -252,12 +268,17 @@ class RequestModel {
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 
 /// Kiểm tra xem người dùng có đang thuê phòng nào không.
 ///
 /// Trả về `true` nếu người dùng đang thuê ít nhất một phòng có trạng thái 'rented',
 /// ngược lại trả về `false`.
 Future<bool> checkIfUserIsCurrentlyRenting(String userId) async {
+=======
+Future<bool> checkIfUserIsCurrentlyRenting(String userId) async {
+  // ... (checkIfUserIsCurrentlyRenting giữ nguyên)
+>>>>>>> Stashed changes
 =======
 Future<bool> checkIfUserIsCurrentlyRenting(String userId) async {
   // ... (checkIfUserIsCurrentlyRenting giữ nguyên)
@@ -289,11 +310,14 @@ Future<bool> checkIfUserIsCurrentlyRenting(String userId) async {
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
         .collection('rooms') // Tên collection chứa thông tin phòng
         .where('currentTenantId', isEqualTo: userId)
         .where('status', isEqualTo: RoomStatus.rented.toJson()) // Sử dụng RoomStatus từ model phòng
         .limit(1) // Chỉ cần tìm một phòng là đủ
 =======
+=======
+>>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
 =======
@@ -310,6 +334,9 @@ Future<bool> checkIfUserIsCurrentlyRenting(String userId) async {
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
@@ -328,7 +355,11 @@ Future<bool> checkIfUserIsCurrentlyRenting(String userId) async {
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
     return false; // Mặc định là chưa thuê nếu có lỗi xảy ra
+=======
+    return false;
+>>>>>>> Stashed changes
 =======
     return false;
 >>>>>>> Stashed changes
