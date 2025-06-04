@@ -1,65 +1,66 @@
 // File: models/room.dart
 
-import 'package:cloud_firestore/cloud_firestore.dart'; // Quan trọng để sử dụng Timestamp
+// import 'package:cloud_firestore/cloud_firestore.dart'; // Có thể không cần nếu chỉ dùng String
 import 'package:flutter/foundation.dart';
 
-/// Enum định nghĩa trạng thái của phòng trọ
 enum RoomStatus {
-  available, // Còn trống
-  rented,    // Đã cho thuê
-  unavailable // Không khả dụng (ví dụ: đang sửa chữa)
+  available,
+  rented,
+  unavailable,
+  pending_payment
 }
 
-// Helper extension cho RoomStatus
 extension RoomStatusExtension on RoomStatus {
   String toJson() {
     switch (this) {
-      case RoomStatus.available:
-        return 'available';
-      case RoomStatus.rented:
-        return 'rented';
-      case RoomStatus.unavailable:
-        return 'unavailable';
+      case RoomStatus.available: return 'available';
+      case RoomStatus.rented: return 'rented';
+      case RoomStatus.unavailable: return 'unavailable';
+      case RoomStatus.pending_payment: return 'pending_payment';
     }
   }
 
   static RoomStatus fromJson(String json) {
     switch (json.toLowerCase()) {
-      case 'available':
-        return RoomStatus.available;
-      case 'rented':
-        return RoomStatus.rented;
-      case 'unavailable':
-        return RoomStatus.unavailable;
+      case 'available': return RoomStatus.available;
+      case 'rented': return RoomStatus.rented;
+      case 'unavailable': return RoomStatus.unavailable;
+      case 'pending_payment': return RoomStatus.pending_payment;
       default:
         print('Warning: Invalid RoomStatus string "$json", defaulting to unavailable.');
         return RoomStatus.unavailable;
     }
   }
+  String getDisplayName() {
+    switch (this) {
+      case RoomStatus.available: return 'Còn trống';
+      case RoomStatus.rented: return 'Đã cho thuê';
+      case RoomStatus.unavailable: return 'Không khả dụng';
+      case RoomStatus.pending_payment: return 'Chờ thanh toán cọc';
+    }
+  }
 }
 
-
-/// Class đại diện cho thông tin một phòng trọ/nhà trọ
 class RoomModel {
-  final String id; // ID duy nhất của phòng trọ
-  final String buildingId; // ID của tòa nhà chứa phòng này
-  final String ownerId; // ID của người chủ sở hữu (liên kết với UserModel)
-  final String title; // Tiêu đề bài đăng (ví dụ: "Phòng trọ giá rẻ quận 1")
-  final String description; // Mô tả chi tiết về phòng trọ
-  final String address; // Địa chỉ cụ thể
-  final double latitude; // Vĩ độ (để hiển thị trên bản đồ)
-  final double longitude; // Kinh độ (để hiển thị trên bản đồ)
-  final double price; // Giá thuê (ví dụ: tính theo tháng)
-  final double area; // Diện tích (mét vuông)
-  final int capacity; // Sức chứa (số người tối đa)
-  final List<String> amenities; // Danh sách các tiện nghi
-  final List<String> imageUrls; // Danh sách URL hình ảnh của phòng trọ
-  final RoomStatus status; // Trạng thái của phòng
-  final DateTime createdAt; // Thời gian đăng tin/tạo phòng
-  final DateTime? updatedAt; // Thời gian cập nhật cuối cùng (có thể null)
-  final double sodien; // Số điện (có thể là chỉ số công tơ)
-  final String? currentTenantId; // ID của người dùng đang thuê phòng (có thể null)
-  final DateTime? rentStartDate;   // Ngày bắt đầu thuê (có thể null)
+  final String id;
+  final String buildingId;
+  final String ownerId;
+  final String title;
+  final String description;
+  final String address;
+  final double latitude;
+  final double longitude;
+  final double price;
+  final double area;
+  final int capacity;
+  final List<String> amenities;
+  final List<String> imageUrls;
+  final RoomStatus status;
+  final DateTime createdAt;   // Vẫn là DateTime
+  final DateTime? updatedAt;  // Vẫn là DateTime
+  final double sodien;
+  final String? currentTenantId;
+  final DateTime? rentStartDate; // Vẫn là DateTime
 
   RoomModel({
     required this.id,
@@ -83,19 +84,53 @@ class RoomModel {
     this.rentStartDate,
   });
 
-  /// Hàm tạo RoomModel từ một Map (thường là dữ liệu từ Firestore)
   factory RoomModel.fromJson(Map<String, dynamic> json) {
-    // Helper function để parse DateTime một cách an toàn từ Timestamp hoặc String
-    DateTime? _parseFirestoreDateTime(dynamic fieldValue) {
-      if (fieldValue == null) return null;
-      if (fieldValue is Timestamp) return fieldValue.toDate();
-      if (fieldValue is String) return DateTime.tryParse(fieldValue);
-      return null; // Hoặc throw một lỗi nếu kiểu không mong muốn
+    // Sử dụng lại hàm helper từ ContractModel hoặc định nghĩa tương tự ở đây
+    DateTime _parseDateTimeFromStringOrTimestamp(dynamic fieldValue, {required DateTime defaultValue}) {
+      if (fieldValue == null) return defaultValue;
+      if (fieldValue is String) {
+        final parsedDate = DateTime.tryParse(fieldValue);
+        if (parsedDate != null) return parsedDate;
+        print("Warning (RoomModel): Could not parse DateTime string '$fieldValue', using default.");
+        return defaultValue;
+      }
+      if (fieldValue is /* Timestamp */ Map && fieldValue.containsKey('_seconds')) {
+          try {
+            return DateTime.fromMillisecondsSinceEpoch(fieldValue['_seconds'] * 1000 + (fieldValue['_nanoseconds'] ?? 0) ~/ 1000000, isUtc: false).toLocal();
+          } catch (e) {
+             print("Warning (RoomModel): Could not parse Timestamp-like map $fieldValue, using default. Error: $e");
+            return defaultValue;
+          }
+      }
+      // if (fieldValue is Timestamp) return fieldValue.toDate();
+      print("Warning (RoomModel): Unknown type for DateTime field ('${fieldValue.runtimeType}'), using default.");
+      return defaultValue;
+    }
+
+    DateTime? _parseNullableDateTimeFromStringOrTimestamp(dynamic fieldValue) {
+        if (fieldValue == null) return null;
+        if (fieldValue is String) {
+             final parsedDate = DateTime.tryParse(fieldValue);
+             if (parsedDate != null) return parsedDate;
+             print("Warning (RoomModel): Could not parse nullable DateTime string '$fieldValue'.");
+             return null;
+        }
+        if (fieldValue is /* Timestamp */ Map && fieldValue.containsKey('_seconds')) {
+            try {
+              return DateTime.fromMillisecondsSinceEpoch(fieldValue['_seconds'] * 1000 + (fieldValue['_nanoseconds'] ?? 0) ~/ 1000000, isUtc: false).toLocal();
+            } catch (e) {
+              print("Warning (RoomModel): Could not parse nullable Timestamp-like map $fieldValue. Error: $e");
+              return null;
+            }
+        }
+        // if (fieldValue is Timestamp) return fieldValue.toDate();
+        print("Warning (RoomModel): Unknown type for nullable DateTime field ('${fieldValue.runtimeType}').");
+        return null;
     }
 
     return RoomModel(
       id: json['id'] as String? ?? '',
-      buildingId: json['buildingId'] as String? ?? '', // Sửa lỗi: Lấy từ 'buildingId'
+      buildingId: json['buildingId'] as String? ?? '',
       ownerId: json['ownerId'] as String? ?? '',
       title: json['title'] as String? ?? 'Chưa có tiêu đề',
       description: json['description'] as String? ?? '',
@@ -108,16 +143,14 @@ class RoomModel {
       amenities: List<String>.from((json['amenities'] as List<dynamic>?)?.map((e) => e.toString()) ?? []),
       imageUrls: List<String>.from((json['imageUrls'] as List<dynamic>?)?.map((e) => e.toString()) ?? []),
       status: RoomStatusExtension.fromJson(json['status'] as String? ?? 'unavailable'),
-      createdAt: _parseFirestoreDateTime(json['createdAt']) ?? DateTime.now(), // Mặc định là now nếu null hoặc parse lỗi
-      updatedAt: _parseFirestoreDateTime(json['updatedAt']),
+      createdAt: _parseDateTimeFromStringOrTimestamp(json['createdAt'], defaultValue: DateTime.now()),
+      updatedAt: _parseNullableDateTimeFromStringOrTimestamp(json['updatedAt']),
       sodien: (json['sodien'] as num?)?.toDouble() ?? 0.0,
       currentTenantId: json['currentTenantId'] as String?,
-      rentStartDate: _parseFirestoreDateTime(json['rentStartDate']),
+      rentStartDate: _parseNullableDateTimeFromStringOrTimestamp(json['rentStartDate']),
     );
   }
 
-
-  /// Hàm chuyển đổi RoomModel thành một Map (để lưu vào Firestore)
   Map<String, dynamic> toJson() {
     return {
       'id': id,
@@ -134,16 +167,16 @@ class RoomModel {
       'amenities': amenities,
       'imageUrls': imageUrls,
       'status': status.toJson(),
-      'createdAt': Timestamp.fromDate(createdAt), // Lưu dưới dạng Timestamp của Firestore
-      'updatedAt': updatedAt != null ? Timestamp.fromDate(updatedAt!) : null, // Lưu dưới dạng Timestamp
+      'createdAt': createdAt.toIso8601String(),   // LƯU LÀ STRING ISO 8601
+      'updatedAt': updatedAt?.toIso8601String(), // LƯU LÀ STRING ISO 8601
       'sodien': sodien,
       'currentTenantId': currentTenantId,
-      'rentStartDate': rentStartDate != null ? Timestamp.fromDate(rentStartDate!) : null, // Lưu dưới dạng Timestamp
+      'rentStartDate': rentStartDate?.toIso8601String(), // LƯU LÀ STRING ISO 8601
     };
   }
 
-   /// Hàm copyWith để tạo bản sao và cập nhật các trường một cách dễ dàng
-   RoomModel copyWith({
+  // copyWith giữ nguyên
+  RoomModel copyWith({
     String? id,
     String? buildingId,
     String? ownerId,
@@ -159,7 +192,6 @@ class RoomModel {
     List<String>? imageUrls,
     RoomStatus? status,
     DateTime? createdAt,
-    // Sử dụng ValueGetter để cho phép truyền null một cách rõ ràng để xóa giá trị
     ValueGetter<DateTime?>? updatedAt,
     double? sodien,
     ValueGetter<String?>? currentTenantId,

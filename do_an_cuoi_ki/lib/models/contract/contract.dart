@@ -1,20 +1,24 @@
-import 'contract_status.dart'; // Import enum ContractStatus
+// File: models/contract/contract.dart
+
+// KHÔNG CẦN import 'package:cloud_firestore/cloud_firestore.dart'; nữa nếu không dùng Timestamp ở đâu khác
+// import 'package:cloud_firestore/cloud_firestore.dart';
+import 'contract_status.dart';
 
 /// Class đại diện cho thông tin một hợp đồng thuê trọ
 class ContractModel {
-  final String id; // ID duy nhất của hợp đồng
-  final String roomId; // ID của phòng trọ được thuê (liên kết với RoomModel)
-  final String tenantId; // ID của người thuê (liên kết với UserModel)
-  final String ownerId; // ID của chủ trọ (liên kết với UserModel)
-  final DateTime startDate; // Ngày bắt đầu hợp đồng
-  final DateTime endDate; // Ngày kết thúc hợp đồng
-  final double rentAmount; // Số tiền thuê hàng tháng/kỳ
-  final double depositAmount; // Số tiền cọc
-  final String? termsAndConditions; // Điều khoản và điều kiện của hợp đồng (có thể null)
-  final ContractStatus status; // Trạng thái của hợp đồng
-  final List<String>? paymentHistoryIds; // Danh sách ID các lần thanh toán (liên kết với BillModel hoặc PaymentModel riêng)
-  final DateTime createdAt; // Thời gian tạo hợp đồng
-  final DateTime? updatedAt; // Thời gian cập nhật cuối cùng
+  final String id;
+  final String roomId;
+  final String tenantId;
+  final String ownerId;
+  final DateTime startDate; // Vẫn là DateTime trong Dart model
+  final DateTime endDate;   // Vẫn là DateTime trong Dart model
+  final double rentAmount;
+  final double depositAmount;
+  final String? termsAndConditions;
+  final ContractStatus status;
+  final List<String>? paymentHistoryIds;
+  final DateTime createdAt; // Vẫn là DateTime trong Dart model
+  final DateTime? updatedAt; // Vẫn là DateTime trong Dart model
 
   ContractModel({
     required this.id,
@@ -32,55 +36,97 @@ class ContractModel {
     this.updatedAt,
   });
 
-  /// Hàm tạo ContractModel từ một Map (thường dùng khi đọc dữ liệu từ Firestore/API)
+  /// Hàm tạo ContractModel từ một Map
   factory ContractModel.fromJson(Map<String, dynamic> json) {
+    // Helper function để parse DateTime từ String (ISO 8601)
+    // Vẫn có thể xử lý Timestamp từ dữ liệu cũ nếu cần
+    DateTime _parseDateTimeFromStringOrTimestamp(dynamic fieldValue, {required DateTime defaultValue}) {
+      if (fieldValue == null) return defaultValue;
+      if (fieldValue is String) { // Ưu tiên parse String
+        final parsedDate = DateTime.tryParse(fieldValue);
+        if (parsedDate != null) return parsedDate;
+        print("Warning: Could not parse DateTime string '$fieldValue', using default.");
+        return defaultValue;
+      }
+      // Xử lý Timestamp từ dữ liệu cũ (nếu có)
+      if (fieldValue is /* Timestamp */ Map && fieldValue.containsKey('_seconds')) { // Kiểm tra cấu trúc Timestamp thủ công
+          try {
+            return DateTime.fromMillisecondsSinceEpoch(fieldValue['_seconds'] * 1000 + (fieldValue['_nanoseconds'] ?? 0) ~/ 1000000, isUtc: false).toLocal();
+          } catch (e) {
+             print("Warning: Could not parse Timestamp-like map $fieldValue, using default. Error: $e");
+            return defaultValue;
+          }
+      }
+      // Fallback nếu không phải là Timestamp của Firebase (nếu bạn không import cloud_firestore)
+      // Hoặc nếu bạn có Timestamp từ nguồn khác.
+      // Nếu bạn chắc chắn chỉ có String hoặc Firebase Timestamp (và bạn đã import cloud_firestore):
+      // if (fieldValue is Timestamp) return fieldValue.toDate();
+
+      print("Warning: Unknown type for DateTime field ('${fieldValue.runtimeType}'), using default.");
+      return defaultValue;
+    }
+
+    DateTime? _parseNullableDateTimeFromStringOrTimestamp(dynamic fieldValue) {
+        if (fieldValue == null) return null;
+        if (fieldValue is String) {
+             final parsedDate = DateTime.tryParse(fieldValue);
+             if (parsedDate != null) return parsedDate;
+             print("Warning: Could not parse nullable DateTime string '$fieldValue'.");
+             return null;
+        }
+        if (fieldValue is /* Timestamp */ Map && fieldValue.containsKey('_seconds')) {
+            try {
+              return DateTime.fromMillisecondsSinceEpoch(fieldValue['_seconds'] * 1000 + (fieldValue['_nanoseconds'] ?? 0) ~/ 1000000, isUtc: false).toLocal();
+            } catch (e) {
+              print("Warning: Could not parse nullable Timestamp-like map $fieldValue. Error: $e");
+              return null;
+            }
+        }
+        // if (fieldValue is Timestamp) return fieldValue.toDate();
+
+        print("Warning: Unknown type for nullable DateTime field ('${fieldValue.runtimeType}').");
+        return null;
+    }
+
     return ContractModel(
       id: json['id'] as String? ?? '',
       roomId: json['roomId'] as String? ?? '',
       tenantId: json['tenantId'] as String? ?? '',
       ownerId: json['ownerId'] as String? ?? '',
-      startDate: (json['startDate'] != null)
-          ? DateTime.parse(json['startDate'] as String)
-          : DateTime.now(), // Cần xử lý cẩn thận hơn ở đây
-      endDate: (json['endDate'] != null)
-          ? DateTime.parse(json['endDate'] as String)
-          : DateTime.now().add(const Duration(days: 365)), // Ví dụ mặc định 1 năm
+      startDate: _parseDateTimeFromStringOrTimestamp(json['startDate'], defaultValue: DateTime.now()),
+      endDate: _parseDateTimeFromStringOrTimestamp(json['endDate'], defaultValue: DateTime.now().add(const Duration(days: 30))),
       rentAmount: (json['rentAmount'] as num?)?.toDouble() ?? 0.0,
       depositAmount: (json['depositAmount'] as num?)?.toDouble() ?? 0.0,
       termsAndConditions: json['termsAndConditions'] as String?,
       status: ContractStatusExtension.fromJson(json['status'] as String? ?? 'pending'),
       paymentHistoryIds: (json['paymentHistoryIds'] as List<dynamic>?)
           ?.map((e) => e.toString())
-          .toList(),
-      createdAt: (json['createdAt'] != null)
-          ? DateTime.parse(json['createdAt'] as String)
-          : DateTime.now(),
-      updatedAt: json['updatedAt'] != null
-          ? DateTime.parse(json['updatedAt'] as String)
-          : null,
+          .toList() ?? [],
+      createdAt: _parseDateTimeFromStringOrTimestamp(json['createdAt'], defaultValue: DateTime.now()),
+      updatedAt: _parseNullableDateTimeFromStringOrTimestamp(json['updatedAt']),
     );
   }
 
-  /// Hàm chuyển đổi ContractModel thành một Map (thường dùng khi ghi dữ liệu lên Firestore/API)
+  /// Hàm chuyển đổi ContractModel thành một Map
   Map<String, dynamic> toJson() {
     return {
       'id': id,
       'roomId': roomId,
       'tenantId': tenantId,
       'ownerId': ownerId,
-      'startDate': startDate.toIso8601String(),
-      'endDate': endDate.toIso8601String(),
+      'startDate': startDate.toIso8601String(), // LƯU LÀ STRING ISO 8601
+      'endDate': endDate.toIso8601String(),     // LƯU LÀ STRING ISO 8601
       'rentAmount': rentAmount,
       'depositAmount': depositAmount,
       'termsAndConditions': termsAndConditions,
       'status': status.toJson(),
       'paymentHistoryIds': paymentHistoryIds,
-      'createdAt': createdAt.toIso8601String(),
-      'updatedAt': updatedAt?.toIso8601String(),
+      'createdAt': createdAt.toIso8601String(), // LƯU LÀ STRING ISO 8601
+      'updatedAt': updatedAt?.toIso8601String(), // LƯU LÀ STRING ISO 8601 (nếu không null)
     };
   }
 
-  /// Hàm copyWith để tạo bản sao của đối tượng với một vài thuộc tính được thay đổi
+  // copyWith giữ nguyên
   ContractModel copyWith({
     String? id,
     String? roomId,
@@ -95,7 +141,7 @@ class ContractModel {
     List<String>? paymentHistoryIds,
     DateTime? createdAt,
     DateTime? updatedAt,
-    bool setUpdatedAtToNull = false, // Thêm cờ để cho phép đặt updatedAt thành null
+    bool setUpdatedAtToNull = false,
   }) {
     return ContractModel(
       id: id ?? this.id,
@@ -114,4 +160,3 @@ class ContractModel {
     );
   }
 }
-

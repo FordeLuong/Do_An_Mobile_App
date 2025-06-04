@@ -4,8 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:do_an_cuoi_ki/models/contract/contract.dart';
 import 'package:do_an_cuoi_ki/models/contract/contract_status.dart';
-import 'package:do_an_cuoi_ki/models/user.dart'; // Đảm bảo UserModel có trường id
-import 'package:intl/intl.dart'; // Cho NumberFormat và DateFormat
+import 'package:do_an_cuoi_ki/models/user.dart';
+import 'package:do_an_cuoi_ki/models/room.dart'; // Import RoomModel và RoomStatus
+import 'package:intl/intl.dart';
 
 class OwnerContractListScreen extends StatefulWidget {
   final UserModel currentUser;
@@ -18,41 +19,40 @@ class OwnerContractListScreen extends StatefulWidget {
 
 class _OwnerContractListScreenState extends State<OwnerContractListScreen> {
   final DateFormat _dateFormat = DateFormat('dd/MM/yyyy');
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   Future<String> _getTenantName(String userIdFromContract) async {
     if (userIdFromContract.isEmpty) return "Chưa có người thuê";
     try {
-      final doc = await FirebaseFirestore.instance.collection('users').doc(userIdFromContract).get();
+      final doc = await _firestore.collection('users').doc(userIdFromContract).get();
       if (doc.exists && doc.data() != null) {
-        // SỬA Ở ĐÂY: Thay 'userName' thành 'name' để khớp với cấu trúc Firestore của bạn
-        return doc.data()!['name'] as String? ?? 'Người thuê không tên (trường name null)';
+        return doc.data()!['name'] as String? ?? 'Người thuê không tên';
       } else {
-        print("Không tìm thấy người dùng với ID: $userIdFromContract trong collection 'users'");
-        return "Người thuê không tồn tại (ID: $userIdFromContract)";
+        return "ID: $userIdFromContract (Không tìm thấy)";
       }
     } catch (e) {
-      print("Lỗi khi lấy tên người thuê (ID: $userIdFromContract): $e");
+      print("Lỗi khi lấy tên người thuê ($userIdFromContract): $e");
     }
-    return "ID: $userIdFromContract (Lỗi tải tên)";
+    return "ID: $userIdFromContract (Lỗi)";
   }
 
   Future<String> _getRoomTitle(String roomId) async {
     if (roomId.isEmpty) return "Không rõ phòng";
     try {
-      final doc = await FirebaseFirestore.instance.collection('rooms').doc(roomId).get();
+      final doc = await _firestore.collection('rooms').doc(roomId).get();
       if (doc.exists && doc.data() != null) {
         return doc.data()!['title'] as String? ?? 'Phòng không tên';
       } else {
-        print("Không tìm thấy phòng với ID: $roomId trong collection 'rooms'");
-        return "Phòng không tồn tại (ID: $roomId)";
+        return "ID: $roomId (Không tìm thấy)";
       }
     } catch (e) {
       print("Lỗi khi lấy tên phòng ($roomId): $e");
     }
-    return "ID: $roomId (Lỗi tải tên phòng)";
+    return "ID: $roomId (Lỗi)";
   }
 
   void _viewContractDetails(BuildContext context, ContractModel contract) {
+    // ... (Giữ nguyên hàm này)
     showDialog(
       context: context,
       builder: (BuildContext dialogContext) {
@@ -67,7 +67,6 @@ class _OwnerContractListScreenState extends State<OwnerContractListScreen> {
                   builder: (context, snapshot) => _buildDetailRow("Phòng:", snapshot.data ?? (snapshot.connectionState == ConnectionState.waiting ? "Đang tải..." : "N/A")),
                 ),
                 FutureBuilder<String>(
-                  // tenantId từ contract chính là ID của user cần tìm
                   future: _getTenantName(contract.tenantId),
                   builder: (context, snapshot) => _buildDetailRow("Người Thuê:", snapshot.data ?? (snapshot.connectionState == ConnectionState.waiting ? "Đang tải..." : "N/A")),
                 ),
@@ -106,7 +105,8 @@ class _OwnerContractListScreenState extends State<OwnerContractListScreen> {
   }
 
   Widget _buildDetailRow(String label, String value) {
-    return Padding(
+    // ... (Giữ nguyên hàm này)
+     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4.0),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -118,17 +118,155 @@ class _OwnerContractListScreenState extends State<OwnerContractListScreen> {
     );
   }
 
+  // Hàm mới để hiển thị dialog thay đổi trạng thái
+  void _showChangeStatusDialog(BuildContext context, ContractModel contract) {
+    ContractStatus? selectedStatus = contract.status; // Trạng thái được chọn ban đầu là trạng thái hiện tại
+    List<ContractStatus> availableOptions = [];
+
+    // Xác định các tùy chọn trạng thái dựa trên trạng thái hiện tại
+    if (contract.status == ContractStatus.pending) {
+      // Nếu đang chờ duyệt, có thể chuyển sang active, expired, terminated, cancelled
+      availableOptions = [
+        ContractStatus.active,
+        ContractStatus.expired,
+        ContractStatus.terminated,
+        ContractStatus.cancelled,
+      ];
+    } else if (contract.status == ContractStatus.active) {
+      // Nếu đang hiệu lực, có thể chuyển sang expired, terminated, cancelled
+      availableOptions = [
+        ContractStatus.expired,
+        ContractStatus.terminated,
+        ContractStatus.cancelled,
+      ];
+    } else {
+      // Đối với các trạng thái khác (expired, terminated, cancelled), không cho phép thay đổi nữa (hoặc tùy logic của bạn)
+      // Ví dụ: có thể cho phép chuyển từ expired -> terminated nếu cần
+      // Hiện tại, nếu không phải pending hoặc active, sẽ không có tùy chọn nào
+       ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Không thể thay đổi trạng thái từ "${contract.status.getDisplayName()}".')),
+      );
+      return;
+    }
+
+    if (availableOptions.isEmpty) {
+       ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Không có tùy chọn thay đổi trạng thái cho hợp đồng này.')),
+      );
+      return;
+    }
+    // Mặc định chọn option đầu tiên nếu trạng thái hiện tại không nằm trong list (ít khi xảy ra)
+    if (!availableOptions.contains(selectedStatus)){
+        selectedStatus = availableOptions.first;
+    }
+
+
+    showDialog(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return StatefulBuilder( // Sử dụng StatefulBuilder để cập nhật UI trong dialog
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text('Thay đổi trạng thái hợp đồng'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: availableOptions.map((statusOption) {
+                    return RadioListTile<ContractStatus>(
+                      title: Text(statusOption.getDisplayName()),
+                      value: statusOption,
+                      groupValue: selectedStatus,
+                      onChanged: (ContractStatus? value) {
+                        if (value != null) {
+                          setDialogState(() { // Cập nhật UI của dialog
+                            selectedStatus = value;
+                          });
+                        }
+                      },
+                    );
+                  }).toList(),
+                ),
+              ),
+              actions: <Widget>[
+                TextButton(
+                  child: const Text('Hủy'),
+                  onPressed: () {
+                    Navigator.of(dialogContext).pop();
+                  },
+                ),
+                ElevatedButton(
+                  child: const Text('Lưu thay đổi'),
+                  onPressed: () async {
+                    if (selectedStatus != null && selectedStatus != contract.status) {
+                      await _updateContractStatus(context, contract, selectedStatus!);
+                    }
+                    Navigator.of(dialogContext).pop();
+                  },
+                ),
+              ],
+            );
+          }
+        );
+      },
+    );
+  }
+
+  // Hàm mới để cập nhật trạng thái hợp đồng và phòng (nếu cần)
+  Future<void> _updateContractStatus(BuildContext scaffoldContext, ContractModel contract, ContractStatus newStatus) async {
+    try {
+      // Cập nhật trạng thái hợp đồng
+      await _firestore.collection('contracts').doc(contract.id).update({
+        'status': newStatus.toJson(),
+        'updatedAt': Timestamp.now(), // Cập nhật thời gian
+      });
+
+      // Xử lý cập nhật trạng thái phòng dựa trên trạng thái hợp đồng mới
+      RoomStatus? newRoomStatus;
+      String? newCurrentTenantId = contract.tenantId; // Mặc định vẫn là người thuê hiện tại
+
+      if (newStatus == ContractStatus.active) {
+        newRoomStatus = RoomStatus.rented;
+      } else if (newStatus == ContractStatus.pending) {
+         // Chuyển từ active/khác về pending (ít xảy ra nhưng để phòng)
+        newRoomStatus = RoomStatus.pending_payment;
+      }
+      else if (newStatus == ContractStatus.cancelled || newStatus == ContractStatus.terminated || newStatus == ContractStatus.expired) {
+        // Nếu hợp đồng bị hủy, thanh lý, hoặc hết hạn, phòng trở nên trống
+        newRoomStatus = RoomStatus.available;
+        newCurrentTenantId = null; // Xóa người thuê hiện tại khỏi phòng
+      }
+
+      if (newRoomStatus != null) {
+        await _firestore.collection('rooms').doc(contract.roomId).update({
+          'status': newRoomStatus.toJson(),
+          'currentTenantId': newCurrentTenantId, // Cập nhật hoặc xóa người thuê
+          'updatedAt': Timestamp.now(),
+        });
+      }
+
+      ScaffoldMessenger.of(scaffoldContext).showSnackBar(
+        SnackBar(content: Text('Đã cập nhật trạng thái hợp đồng thành "${newStatus.getDisplayName()}".')),
+      );
+    } catch (e) {
+      print("Lỗi khi cập nhật trạng thái hợp đồng: $e");
+      ScaffoldMessenger.of(scaffoldContext).showSnackBar(
+        SnackBar(content: Text('Lỗi: Không thể cập nhật trạng thái. $e')),
+      );
+    }
+  }
+
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text("Danh sách hợp đồng"),
+        backgroundColor: Theme.of(context).colorScheme.primary,
       ),
       body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance
+        stream: _firestore
             .collection('contracts')
-            .where('ownerId', isEqualTo: widget.currentUser.id) // Đảm bảo widget.currentUser.id là chính xác
+            .where('ownerId', isEqualTo: widget.currentUser.id)
             .orderBy('createdAt', descending: true)
             .snapshots(),
         builder: (context, snapshot) {
@@ -136,18 +274,16 @@ class _OwnerContractListScreenState extends State<OwnerContractListScreen> {
             return const Center(child: CircularProgressIndicator());
           }
           if (snapshot.hasError) {
-            print("Lỗi Stream Firestore (OwnerContractListScreen): ${snapshot.error}");
-            print("Stack trace: ${snapshot.stackTrace}");
-            return Center(child: Text("Đã xảy ra lỗi: ${snapshot.error}\nKiểm tra log để biết chi tiết. Đảm bảo chỉ mục Firestore đã được tạo."));
+            return Center(child: Text("Lỗi: ${snapshot.error}\nKiểm tra chỉ mục Firestore."));
           }
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return Center(
+            return const Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.folder_off_outlined, size: 80, color: Colors.grey.shade400),
-                  const SizedBox(height: 16),
-                  Text("Chưa có hợp đồng nào.", style: TextStyle(fontSize: 18, color: Colors.grey.shade600)),
+                  Icon(Icons.folder_off_outlined, size: 80, color: Colors.grey),
+                  SizedBox(height: 16),
+                  Text("Chưa có hợp đồng nào.", style: TextStyle(fontSize: 18, color: Colors.grey)),
                 ],
               ),
             );
@@ -156,7 +292,7 @@ class _OwnerContractListScreenState extends State<OwnerContractListScreen> {
           final contractDocs = snapshot.data!.docs;
 
           return ListView.separated(
-            padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 16.0),
+            padding: const EdgeInsets.all(12.0),
             itemCount: contractDocs.length,
             separatorBuilder: (context, index) => const SizedBox(height: 12),
             itemBuilder: (context, index) {
@@ -169,16 +305,12 @@ class _OwnerContractListScreenState extends State<OwnerContractListScreen> {
                 }
                 contract = ContractModel.fromJson(data);
               } catch (e,s) {
-                print("Lỗi parse ContractModel (ID: ${contractDoc.id}): $e. \nData: ${contractDoc.data()}");
-                print("Stack Trace: $s");
+                print("Lỗi parse ContractModel (ID: ${contractDoc.id}): $e. \nData: ${contractDoc.data()} \nStack: $s");
                 return Card(
                   color: Colors.red.shade50,
                   child: Padding(
                     padding: const EdgeInsets.all(16.0),
-                    child: Text(
-                      "Lỗi hiển thị hợp đồng (ID: ${contractDoc.id}).\nChi tiết lỗi: $e\nVui lòng kiểm tra định dạng dữ liệu trên Firestore, đặc biệt là các trường ngày tháng.",
-                      style: TextStyle(color: Colors.red.shade900),
-                    ),
+                    child: Text( "Lỗi hiển thị hợp đồng ID: ${contractDoc.id}.\nLỗi: $e", style: TextStyle(color: Colors.red.shade900)),
                   ),
                 );
               }
@@ -189,64 +321,91 @@ class _OwnerContractListScreenState extends State<OwnerContractListScreen> {
                   borderRadius: BorderRadius.circular(12),
                   side: BorderSide(color: _getStatusBorderColor(contract.status), width: 1.2),
                 ),
-                child: InkWell(
-                  onTap: () => _viewContractDetails(context, contract),
-                  borderRadius: BorderRadius.circular(12),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                child: Column( // Sử dụng Column để thêm hàng nút điều chỉnh
+                  children: [
+                    InkWell( // Phần thông tin hợp đồng có thể nhấn để xem chi tiết
+                      onTap: () => _viewContractDetails(context, contract),
+                      borderRadius: const BorderRadius.only(topLeft: Radius.circular(12), topRight: Radius.circular(12)),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Expanded(
-                              child: FutureBuilder<String>(
-                                future: _getRoomTitle(contract.roomId),
-                                builder: (context, snapshot) {
-                                  return Text(
-                                    snapshot.data ?? (snapshot.connectionState == ConnectionState.waiting ? "Phòng..." : "N/A"),
-                                    style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
-                                    overflow: TextOverflow.ellipsis,
-                                  );
-                                },
-                              ),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(
+                                  child: FutureBuilder<String>(
+                                    future: _getRoomTitle(contract.roomId),
+                                    builder: (context, snapshot) {
+                                      return Text(
+                                        snapshot.data ?? (snapshot.connectionState == ConnectionState.waiting ? "Phòng..." : "N/A"),
+                                        style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                                        overflow: TextOverflow.ellipsis,
+                                      );
+                                    },
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Chip(
+                                  label: Text(
+                                    contract.status.getDisplayName().toUpperCase(),
+                                    style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                                  ),
+                                  backgroundColor: _getStatusColor(contract.status),
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                ),
+                              ],
                             ),
-                            const SizedBox(width: 8),
-                            Chip(
-                              label: Text(
-                                contract.status.getDisplayName().toUpperCase(),
-                                style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                            const Divider(height: 16),
+                            FutureBuilder<String>(
+                              future: _getTenantName(contract.tenantId),
+                              builder: (context, snapshot) {
+                                return _buildInfoRow(Icons.person_outline, "Người thuê:", snapshot.data ?? (snapshot.connectionState == ConnectionState.waiting ? "Đang tải..." : "Chưa có"));
+                              },
+                            ),
+                            _buildInfoRow(Icons.calendar_today_outlined, "Từ ngày:", _dateFormat.format(contract.startDate)),
+                            _buildInfoRow(Icons.event_busy_outlined, "Đến ngày:", _dateFormat.format(contract.endDate)),
+                            _buildInfoRow(Icons.attach_money_outlined, "Tiền thuê:", "${NumberFormat("#,##0", "vi_VN").format(contract.rentAmount)} VNĐ"),
+                            _buildInfoRow(Icons.money_outlined, "Tiền cọc:", "${NumberFormat("#,##0", "vi_VN").format(contract.depositAmount)} VNĐ"),
+                            const SizedBox(height: 8),
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: Text(
+                                "Tạo lúc: ${_dateFormat.format(contract.createdAt)}",
+                                style: TextStyle(fontSize: 11, color: Colors.grey.shade600, fontStyle: FontStyle.italic),
                               ),
-                              backgroundColor: _getStatusColor(contract.status),
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                             ),
                           ],
                         ),
-                        const Divider(height: 16),
-                        FutureBuilder<String>(
-                          future: _getTenantName(contract.tenantId), // tenantId từ contract
-                          builder: (context, snapshot) {
-                            return _buildInfoRow(Icons.person_outline, "Người thuê:", snapshot.data ?? (snapshot.connectionState == ConnectionState.waiting ? "Đang tải..." : "Chưa có"));
-                          },
-                        ),
-                        _buildInfoRow(Icons.calendar_today_outlined, "Từ ngày:", _dateFormat.format(contract.startDate)),
-                        _buildInfoRow(Icons.event_busy_outlined, "Đến ngày:", _dateFormat.format(contract.endDate)),
-                        _buildInfoRow(Icons.attach_money_outlined, "Tiền thuê:", "${NumberFormat("#,##0", "vi_VN").format(contract.rentAmount)} VNĐ"),
-                        _buildInfoRow(Icons.money_outlined, "Tiền cọc:", "${NumberFormat("#,##0", "vi_VN").format(contract.depositAmount)} VNĐ"),
-                        const SizedBox(height: 8),
-                        Align(
+                      ),
+                    ),
+                    // Hàng chứa nút điều chỉnh trạng thái
+                    if (contract.status == ContractStatus.pending || contract.status == ContractStatus.active) // Chỉ hiện nút nếu là pending hoặc active
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                        child: Align(
                           alignment: Alignment.centerRight,
-                          child: Text(
-                            "Tạo lúc: ${_dateFormat.format(contract.createdAt)}",
-                            style: TextStyle(fontSize: 11, color: Colors.grey.shade600, fontStyle: FontStyle.italic),
+                          child: TextButton.icon(
+                            icon: Icon(Icons.edit_note, color: Theme.of(context).colorScheme.primary),
+                            label: Text(
+                              'Điều chỉnh trạng thái',
+                              style: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.bold),
+                            ),
+                            onPressed: () => _showChangeStatusDialog(context, contract),
+                             style: TextButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                side: BorderSide(color: Theme.of(context).colorScheme.primary.withOpacity(0.5))
+                              )
+                            ),
                           ),
                         ),
-                      ],
-                    ),
-                  ),
+                      ),
+                  ],
                 ),
               );
             },
@@ -277,6 +436,8 @@ class _OwnerContractListScreenState extends State<OwnerContractListScreen> {
       case ContractStatus.expired: return Colors.orange.shade700;
       case ContractStatus.terminated: return Colors.purple.shade600;
       case ContractStatus.cancelled: return Colors.red.shade700;
+      // Mặc định nếu có trạng thái mới chưa xử lý
+      // default: return Colors.grey;
     }
   }
 
@@ -287,6 +448,7 @@ class _OwnerContractListScreenState extends State<OwnerContractListScreen> {
       case ContractStatus.expired: return Colors.orange.shade300;
       case ContractStatus.terminated: return Colors.purple.shade300;
       case ContractStatus.cancelled: return Colors.red.shade300;
+      // default: return Colors.grey.shade300;
     }
   }
 }
