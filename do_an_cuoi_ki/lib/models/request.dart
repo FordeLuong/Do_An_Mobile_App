@@ -60,7 +60,7 @@ class RequestModel {
   final String moTa;
   final String roomId; // ID của phòng liên quan đến yêu cầu
   final String userKhachId; // ID của người dùng tạo yêu cầu
-  final DateTime thoiGian;
+  final DateTime thoiGian; // Sẽ được lưu/tải dưới dạng String (ISO 8601)
   final String sdt;
   final String Name;
 
@@ -76,25 +76,42 @@ class RequestModel {
   });
 
   factory RequestModel.fromJson(Map<String, dynamic> json) {
-  DateTime _parseFirestoreDateTime(dynamic fieldValue) {
-    if (fieldValue == null) return DateTime.now(); // Hoặc xử lý null theo cách khác
-    if (fieldValue is Timestamp) return fieldValue.toDate(); // QUAN TRỌNG
-    if (fieldValue is String) return DateTime.tryParse(fieldValue) ?? DateTime.now();
-    print("Warning: Unknown type for DateTime field, defaulting to now. Value: $fieldValue, Type: ${fieldValue.runtimeType}");
-    return DateTime.now();
-  }
+    // Helper function to parse DateTime from String (ISO 8601) or Timestamp
+    DateTime _parseDateTime(dynamic fieldValue) {
+      if (fieldValue == null) {
+        print("Warning: DateTime field 'thoi_gian' is null, defaulting to DateTime.now().");
+        return DateTime.now(); // Default if null
+      }
+      if (fieldValue is String) {
+        // Attempt to parse ISO 8601 string
+        final parsedDate = DateTime.tryParse(fieldValue);
+        if (parsedDate != null) {
+          return parsedDate;
+        } else {
+          print("Warning: Could not parse DateTime string '$fieldValue' for 'thoi_gian', defaulting to DateTime.now().");
+          return DateTime.now(); // Default if parsing fails
+        }
+      }
+      if (fieldValue is Timestamp) {
+        // Handle Timestamp for backward compatibility or other sources
+        return fieldValue.toDate();
+      }
+      // Fallback for unknown types
+      print("Warning: Unknown type for 'thoi_gian' field (Type: ${fieldValue.runtimeType}, Value: $fieldValue), defaulting to DateTime.now().");
+      return DateTime.now();
+    }
 
-  return RequestModel(
-    id: json['id'] as String? ?? json['request_id'] as String? ?? '', // Kiểm tra các tên trường có thể có cho id
-    loaiRequest: RequestTypeExtension.fromJson(json['loai_request'] as String? ?? 'sua_chua'),
-    moTa: json['mo_ta'] as String? ?? '',
-    roomId: json['room_id'] as String? ?? '',
-    userKhachId: json['user_khach_id'] as String? ?? '',
-    thoiGian: _parseFirestoreDateTime(json['thoi_gian']), // ĐÃ SỬA
-    sdt: json['sdt'] as String? ?? '',
-    Name: json['Name'] as String? ?? '',
-  );
-}
+    return RequestModel(
+      id: json['id'] as String? ?? json['request_id'] as String? ?? '', // Kiểm tra các tên trường có thể có cho id
+      loaiRequest: RequestTypeExtension.fromJson(json['loai_request'] as String? ?? 'sua_chua'),
+      moTa: json['mo_ta'] as String? ?? '',
+      roomId: json['room_id'] as String? ?? '',
+      userKhachId: json['user_khach_id'] as String? ?? '',
+      thoiGian: _parseDateTime(json['thoi_gian']), // Sử dụng helper mới
+      sdt: json['sdt'] as String? ?? '',
+      Name: json['Name'] as String? ?? '',
+    );
+  }
 
   Map<String, dynamic> toJson() {
     return {
@@ -103,7 +120,7 @@ class RequestModel {
       'mo_ta': moTa,
       'room_id': roomId,
       'user_khach_id': userKhachId,
-      'thoi_gian': Timestamp.fromDate(thoiGian), // Lưu là Timestamp
+      'thoi_gian': thoiGian.toIso8601String(), // Lưu DateTime dưới dạng String (ISO 8601)
       'sdt': sdt,
       'Name': Name
     };
