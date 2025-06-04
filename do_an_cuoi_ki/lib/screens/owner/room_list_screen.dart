@@ -1,19 +1,34 @@
+// File: screens/owner/room_list_screen.dart (Hoặc tên file của bạn)
+
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:do_an_cuoi_ki/models/user.dart';
+import 'package:do_an_cuoi_ki/models/user.dart'; // Model User của bạn
 import 'package:do_an_cuoi_ki/screens/owner/lap_hop_dong.dart';
 import 'package:do_an_cuoi_ki/screens/owner/sua_chua.dart';
-import 'package:do_an_cuoi_ki/screens/owner/sua_chua_2.dart';
+import 'package:do_an_cuoi_ki/screens/owner/sua_chua_2.dart'; 
 import 'package:do_an_cuoi_ki/screens/owner/thanh_ly_hop_dong.dart';
+// import 'package:do_an_cuoi_ki/screens/owner/quan_ly_phieu_sua_chua_screen.dart'; // Import màn hình quản lý phiếu sửa chữa
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:do_an_cuoi_ki/models/request.dart'; // <<=== IMPORT REQUEST MODEL
+import 'package:intl/intl.dart'; // Để format DateTime nếu cần
 
 class RoomListScreen extends StatelessWidget {
   final String buildingId;
-  final ownerID;
+  final String ownerID; // Giữ nguyên tên biến ownerID
   final UserModel currentUser;
+<<<<<<< Updated upstream
   const RoomListScreen({super.key, required this.buildingId, required this.ownerID, required this.currentUser});
 
   
+=======
+
+  const RoomListScreen({
+    super.key,
+    required this.buildingId,
+    required this.ownerID,
+    required this.currentUser,
+  });
+>>>>>>> Stashed changes
 
   @override
   Widget build(BuildContext context) {
@@ -26,22 +41,27 @@ class RoomListScreen extends StatelessWidget {
         stream: FirebaseFirestore.instance
             .collection('rooms')
             .where('buildingId', isEqualTo: buildingId)
+            // .where('ownerId', isEqualTo: ownerID) // Thêm điều kiện này nếu cần thiết và có trường ownerId trong room
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
+          if (snapshot.hasError) {
+            print("Lỗi StreamBuilder (RoomListScreen): ${snapshot.error}");
+            return Center(child: Text("Lỗi tải danh sách phòng: ${snapshot.error}"));
+          }
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return const Center(child: Text("Không có phòng nào."));
+            return const Center(child: Text("Không có phòng nào trong tòa nhà này."));
           }
 
           final rooms = snapshot.data!.docs;
 
           return ListView.builder(
-            
             itemCount: rooms.length,
             itemBuilder: (context, index) {
-              final data = rooms[index].data() as Map<String, dynamic>;
+              final roomDoc = rooms[index]; // Đây là QueryDocumentSnapshot
+              final data = roomDoc.data() as Map<String, dynamic>; // Dữ liệu của phòng
 
               return Padding(
                 padding: const EdgeInsets.all(8.0),
@@ -57,7 +77,9 @@ class RoomListScreen extends StatelessWidget {
                           topRight: Radius.circular(12),
                         ),
                         child: CachedNetworkImage(
-                          imageUrl: data['imageUrls']?[0] ?? '',
+                          imageUrl: (data['imageUrls'] as List<dynamic>?)?.isNotEmpty == true
+                              ? data['imageUrls'][0] as String
+                              : '', // URL ảnh mặc định hoặc xử lý khác
                           height: 180,
                           width: double.infinity,
                           fit: BoxFit.cover,
@@ -66,7 +88,11 @@ class RoomListScreen extends StatelessWidget {
                             color: Colors.grey[300],
                             child: const Center(child: CircularProgressIndicator()),
                           ),
-                          errorWidget: (context, url, error) => const Icon(Icons.error),
+                          errorWidget: (context, url, error) => Container(
+                            height: 180,
+                            color: Colors.grey[200],
+                            child: Icon(Icons.broken_image, color: Colors.grey[400], size: 50),
+                          ),
                         ),
                       ),
                       Padding(
@@ -76,162 +102,202 @@ class RoomListScreen extends StatelessWidget {
                           children: [
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                    Text(
-                                      data['title'] ?? 'Phòng không tên',
-                                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                                    ),
-                                    Positioned(
-                                                top: 8,
-                                                right: 8,
-                                                child: StreamBuilder<QuerySnapshot>(
-                                                  stream: FirebaseFirestore.instance
-                                                      .collection('requests')
-                                                      .where('room_id', isEqualTo: rooms[index].id)
-                                                      .snapshots(),
-                                                  builder: (context, snapshot) {
-                                                    int requestCount = snapshot.data?.docs.length ?? 0;
+                                Expanded( // Cho Text tiêu đề co giãn
+                                  child: Text(
+                                    data['title'] ?? 'Phòng không tên',
+                                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                // Không dùng Positioned ở đây, StreamBuilder sẽ tự điều chỉnh
+                                StreamBuilder<QuerySnapshot>(
+                                  stream: FirebaseFirestore.instance
+                                      .collection('requests')
+                                      .where('room_id', isEqualTo: roomDoc.id) // Sử dụng roomDoc.id
+                                      // Thêm điều kiện lọc request chưa xử lý nếu cần
+                                      // .where('statusRequest', isEqualTo: 'pending')
+                                      .snapshots(),
+                                  builder: (context, requestSnapshot) { // Đổi tên snapshot để tránh nhầm lẫn
+                                    if (requestSnapshot.connectionState == ConnectionState.waiting) {
+                                      return const SizedBox(width: 28, height: 28, child: CircularProgressIndicator(strokeWidth: 2,));
+                                    }
+                                    int requestCount = requestSnapshot.data?.docs.length ?? 0;
 
-                                                    return GestureDetector(
-                                                      onTap: () {
-                                                        if (requestCount > 0) {
-                                                          showDialog(
-                                                            context: context,
-                                                            builder: (context) => RequestDialog(snapshot.data!.docs),
-                                                          );
-                                                        } else {
-                                                          ScaffoldMessenger.of(context).showSnackBar(
-                                                            const SnackBar(content: Text('Không có yêu cầu nào.')),
-                                                          );
-                                                        }
-                                                      },
-                                                      child: Stack(
-                                                        alignment: Alignment.topRight,
-                                                        children: [
-                                                          Icon(
-                                                            requestCount > 0 ? Icons.notifications_active : Icons.notifications_none,
-                                                            color: requestCount > 0 ? Colors.red : Colors.grey,
-                                                            size: 28,
-                                                          ),
-                                                          if (requestCount > 0)
-                                                            Container(
-                                                              padding: const EdgeInsets.all(2),
-                                                              decoration: BoxDecoration(
-                                                                color: Colors.redAccent,
-                                                                borderRadius: BorderRadius.circular(10),
-                                                              ),
-                                                              constraints: const BoxConstraints(
-                                                                minWidth: 18,
-                                                                minHeight: 18,
-                                                              ),
-                                                              child: Text(
-                                                                '$requestCount',
-                                                                style: const TextStyle(
-                                                                  color: Colors.white,
-                                                                  fontSize: 12,
-                                                                ),
-                                                                textAlign: TextAlign.center,
-                                                              ),
-                                                            ),
-                                                        ],
-                                                      ),
-                                                    );
-                                                  },
-                                                ),
+                                    return GestureDetector(
+                                      onTap: () {
+                                        if (requestSnapshot.hasData && requestSnapshot.data!.docs.isNotEmpty) {
+                                          showDialog(
+                                            context: context,
+                                            // Truyền trực tiếp danh sách các DocumentSnapshot
+                                            builder: (context) => RequestDialog(requestSnapshot.data!.docs),
+                                          );
+                                        } else {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            const SnackBar(content: Text('Không có yêu cầu nào cho phòng này.')),
+                                          );
+                                        }
+                                      },
+                                      child: Stack(
+                                        alignment: Alignment.topRight,
+                                        children: [
+                                          Icon(
+                                            requestCount > 0 ? Icons.notifications_active : Icons.notifications_none,
+                                            color: requestCount > 0 ? Colors.red.shade600 : Colors.grey.shade600,
+                                            size: 30,
+                                          ),
+                                          if (requestCount > 0)
+                                            Container(
+                                              padding: const EdgeInsets.all(3),
+                                              decoration: BoxDecoration(
+                                                color: Colors.redAccent,
+                                                shape: BoxShape.circle, // Bo tròn hơn
                                               ),
+                                              constraints: const BoxConstraints(
+                                                minWidth: 18,
+                                                minHeight: 18,
+                                              ),
+                                              child: Text(
+                                                '$requestCount',
+                                                style: const TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: 11, // Giảm font một chút
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                                textAlign: TextAlign.center,
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                    );
+                                  },
+                                ),
                               ],
                             ),
-                            
+                            const SizedBox(height: 6),
+                            Text("Giá: ${data['price'] ?? 'N/A'} VNĐ / tháng"),
                             const SizedBox(height: 4),
-                            Text("Giá: ${data['price']} VNĐ / tháng"),
+                            Text("Diện tích: ${data['area'] ?? 'N/A'} m²"),
                             const SizedBox(height: 4),
-                            Text("Diện tích: ${data['area']} m²"),
+                            Text("Sức chứa: ${data['capacity'] ?? 'N/A'} người"),
                             const SizedBox(height: 4),
-                            Text("Sức chứa: ${data['capacity']} người"),
-                            const SizedBox(height: 4),
-                            Text("Trạng thái: ${data['status']}"),
-                            const SizedBox(height: 8),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            Text("Trạng thái: ${data['status'] ?? 'N/A'}"),
+                            const SizedBox(height: 12),
+                            Wrap( // Sử dụng Wrap để các nút tự xuống dòng nếu không đủ chỗ
+                              spacing: 8.0, // Khoảng cách ngang
+                              runSpacing: 8.0, // Khoảng cách dọc
+                              alignment: WrapAlignment.spaceBetween, // Căn đều nếu có không gian
                               children: [
-                                
-                                ElevatedButton(
+                                ElevatedButton.icon(
+                                  icon: Icon(Icons.description_outlined, size: 18),
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: data['status'] == 'rented' ? Colors.grey : Colors.amber,
-                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                    backgroundColor: (data['status'] == 'rented')
+                                        ? Colors.grey.shade400
+                                        : Colors.blue.shade600,
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                                   ),
-                                  onPressed: data['status'] == 'rented' 
-                                      ? null 
+                                  onPressed: (data['status'] == 'rented')
+                                      ? null
                                       : () {
                                           Navigator.push(
                                             context,
                                             MaterialPageRoute(
                                               builder: (context) => ContractFormPage(
-                                                roomId: rooms[index].id,
+                                                roomId: roomDoc.id, // Sử dụng roomDoc.id
                                                 ownerId: ownerID,
                                               ),
                                             ),
                                           );
                                         },
-                                  child: Text('Lập hợp đồng'),
+                                  label: const Text('Lập HĐ'),
                                 ),
-                                ElevatedButton(
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.amber,
-                                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                ElevatedButton.icon(
+                                  icon: Icon(Icons.receipt_long_outlined, size: 18),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.orange.shade700,
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                  ),
+                                  onPressed: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => ThanhLyHopDong(
+                                          currentUser: currentUser,
+                                          roomId: roomDoc.id, // Sử dụng roomDoc.id
+                                        ),
                                       ),
-                                      onPressed: () {
-                                        Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder: (context) => ThanhLyHopDong(
-                                                currentUser: currentUser,
-                                                roomId: rooms[index].id,
-                                              ),
-                                            ),
-                                          );
-                                      },
-                                      
-                                      child: Text('Thanh lý'),
+                                    );
+                                  },
+                                  label: const Text('Thanh Lý'),
                                 ),
-                                
-                                IconButton(
-                                  icon: const Icon(Icons.edit, color: Colors.blue),
+                                ElevatedButton.icon(
+                                  icon: Icon(Icons.build_outlined, size: 18),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.purple.shade600,
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                  ),
                                   onPressed: () {
-                                    // Chuyển sang trang chỉnh sửa phòng nếu cần
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => QuanLyPhieuSuaChuaScreen(
+                                          roomId: roomDoc.id, // Sử dụng roomDoc.id
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                  label: const Text('Sửa Chữa'),
+                                ),
+                                // Các IconButton có thể gộp thành một PopupMenuButton nếu nhiều
+                                IconButton(
+                                  icon: const Icon(Icons.edit_note_outlined, color: Colors.teal),
+                                  tooltip: "Chỉnh sửa phòng",
+                                  onPressed: () {
+                                    // TODO: Chuyển sang trang chỉnh sửa phòng
+                                    print("Edit room: ${roomDoc.id}");
                                   },
                                 ),
                                 IconButton(
-                                  icon: const Icon(Icons.delete, color: Colors.red),
-                                  onPressed: () {
-                                    // Xử lý xóa phòng
-                                    FirebaseFirestore.instance
-                                        .collection('rooms')
-                                        .doc(rooms[index].id)
-                                        .delete();
+                                  icon: Icon(Icons.delete_outline, color: Colors.red.shade700),
+                                  tooltip: "Xóa phòng",
+                                  onPressed: () async {
+                                    final confirmDelete = await showDialog<bool>(
+                                      context: context,
+                                      builder: (BuildContext dialogContext) => AlertDialog(
+                                        title: const Text('Xác nhận xóa'),
+                                        content: Text('Bạn có chắc chắn muốn xóa phòng "${data['title'] ?? roomDoc.id}" không? Hành động này không thể hoàn tác.'),
+                                        actions: <Widget>[
+                                          TextButton(
+                                            child: const Text('Hủy'),
+                                            onPressed: () => Navigator.of(dialogContext).pop(false),
+                                          ),
+                                          TextButton(
+                                            child: const Text('XÓA', style: TextStyle(color: Colors.red)),
+                                            onPressed: () => Navigator.of(dialogContext).pop(true),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                    if (confirmDelete == true) {
+                                      try {
+                                        await FirebaseFirestore.instance
+                                            .collection('rooms')
+                                            .doc(roomDoc.id)
+                                            .delete();
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(content: Text('Đã xóa phòng: ${data['title'] ?? roomDoc.id}')),
+                                        );
+                                      } catch (e) {
+                                         ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(content: Text('Lỗi khi xóa phòng: $e')),
+                                        );
+                                      }
+                                    }
                                   },
                                 ),
-                                
                               ],
                             ),
-                            ElevatedButton(
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.amber,
-                                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                      ),
-                                      onPressed: () {
-                                        Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder: (context) => QuanLyPhieuSuaChuaScreen(
-                                                roomId: rooms[index].id,
-                                              ),
-                                            ),
-                                          );
-                                      },
-                                      
-                                      child: Text('Sửa Chữa'),
-                                ),
                           ],
                         ),
                       ),
@@ -249,8 +315,9 @@ class RoomListScreen extends StatelessWidget {
 
 class RequestDialog extends StatelessWidget {
   final List<QueryDocumentSnapshot> requestDocs;
+  final DateFormat _dateFormat = DateFormat('dd/MM/yyyy HH:mm'); // Di chuyển DateFormat ra ngoài để tái sử dụng
 
-  const RequestDialog(this.requestDocs, {super.key});
+  RequestDialog(this.requestDocs, {super.key}); // Sửa constructor
 
   Future<void> deleteRequestById(String requestId) async {
     try {
@@ -261,135 +328,167 @@ class RequestDialog extends StatelessWidget {
       debugPrint("Request có ID '$requestId' đã được xóa thành công.");
     } catch (e) {
       debugPrint("Lỗi khi xóa request: $e");
+      // Có thể throw lỗi lại để UI xử lý nếu cần
     }
   }
 
+  // Hàm helper để lấy tên phòng (nếu bạn muốn hiển thị trong dialog)
+  Future<String> _getRoomTitleForRequest(String roomId) async {
+    if (roomId.isEmpty) return "Không rõ phòng";
+    try {
+      final doc = await FirebaseFirestore.instance.collection('rooms').doc(roomId).get();
+      if (doc.exists && doc.data() != null) {
+        return doc.data()!['title'] as String? ?? 'Phòng không tên';
+      }
+    } catch (e) {
+      print("Lỗi khi lấy tên phòng cho request: $e");
+    }
+    return "Phòng ID: $roomId";
+  }
+
+
   @override
   Widget build(BuildContext context) {
-    List<QueryDocumentSnapshot> localDocs = List.from(requestDocs); // Danh sách tạm
+    // Không cần localDocs và StatefulBuilder nếu không có logic thay đổi danh sách bên trong dialog này nữa
+    // Nếu có logic xóa item ngay trong dialog thì vẫn cần StatefulBuilder và localDocs
 
-
-    Future<void> markRequestAsProcessed(String requestId) async {
-      await FirebaseFirestore.instance
-          .collection('requests')
-          .doc(requestId)
-          .update({'status': 'processed'});
-    }
     return AlertDialog(
       title: const Text('Danh sách yêu cầu'),
-      content: StatefulBuilder(
-        builder: (context, setState) {
-          return SizedBox(
-            width: double.maxFinite,
-            child: ListView.builder(
-              shrinkWrap: true,
-              itemCount: localDocs.length,
-              itemBuilder: (context, index) {
-                final data = localDocs[index].data() as Map<String, dynamic>;
-                final name= data['Name'] ?? '';
-                final loai = data['loai_request'] ?? 'Không rõ';
-                final moTa = data['mo_ta'] ?? '';
-                final thoiGian = data['thoi_gian'] != null
-                    ? DateTime.parse(data['thoi_gian']).toLocal()
-                    : null;
-                final sdt=data['sdt'];
-                final roomId =data['room_id'] ?? '';
-                final tenantId =data['user_khach_id'] ?? '';
-                final isSuaChua = loai == 'sua_chua'; // Kiểm tra loại yêu cầu
+      contentPadding: const EdgeInsets.fromLTRB(12.0, 20.0, 12.0, 0), // Điều chỉnh padding
+      content: SizedBox(
+        width: double.maxFinite,
+        child: requestDocs.isEmpty
+            ? const Center(child: Text("Không có yêu cầu nào."))
+            : ListView.builder(
+                shrinkWrap: true,
+                itemCount: requestDocs.length,
+                itemBuilder: (context, index) {
+                  final requestDocData = requestDocs[index].data() as Map<String, dynamic>;
+                  // TÁI SỬ DỤNG RequestModel.fromJson
+                  RequestModel request;
+                  try {
+                    // Đảm bảo ID của document được gán vào model nếu fromJson không tự xử lý
+                    Map<String, dynamic> dataWithId = Map.from(requestDocData);
+                    if (!dataWithId.containsKey('id') || (dataWithId['id'] == null || (dataWithId['id'] as String).isEmpty)) {
+                       dataWithId['id'] = requestDocs[index].id;
+                    }
+                    request = RequestModel.fromJson(dataWithId);
+                  } catch (e,s) {
+                    print("Lỗi parse RequestModel trong Dialog: $e. Data: $requestDocData");
+                    print("Stack trace: $s");
+                    return ListTile(
+                      leading: Icon(Icons.error, color: Colors.red),
+                      title: Text("Lỗi dữ liệu yêu cầu"),
+                      subtitle: Text("ID: ${requestDocs[index].id}"),
+                    );
+                  }
 
-                return ListTile(
-                  // leading: const Icon(Icons.assignment),
-                  title: Text(loai),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(name),
-                      Text(moTa),
-                      if (thoiGian != null)
-                        Text(
-                          'Lúc: ${thoiGian.day}/${thoiGian.month}/${thoiGian.year} ${thoiGian.hour}:${thoiGian.minute}',
-                          style: const TextStyle(fontSize: 12, color: Colors.grey),
-                        ),
-                      Text(sdt),
-                    ],
-                  ),
-                  trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (isSuaChua) // Chỉ hiển thị nút xử lý nếu là sửa chữa
-                    IconButton(
-                      icon: const Icon(Icons.check_circle, color: Colors.green),
-                      onPressed: () async {
-                        final confirm = await showDialog<bool>(
-                          context: context,
-                          builder: (_) => AlertDialog(
-                            title: const Text('Xác nhận'),
-                            content: const Text('Bạn có chắc đã xử lý yêu cầu này?'),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.pop(context, false),
-                                child: const Text('Hủy'),
+                  final isSuaChua = request.loaiRequest == RequestType.suaChua;
+
+                  return Card( // Bọc mỗi item bằng Card cho đẹp hơn
+                    margin: const EdgeInsets.only(bottom: 8.0),
+                    elevation: 1,
+                    child: ListTile(
+                      leading: Icon(
+                        request.loaiRequest == RequestType.thuePhong ? Icons.vpn_key_outlined :
+                        request.loaiRequest == RequestType.traPhong ? Icons.logout_outlined :
+                        Icons.build_circle_outlined,
+                        color: Theme.of(context).primaryColor,
+                      ),
+                      title: Text(request.loaiRequest.getDisplayName(), style: TextStyle(fontWeight: FontWeight.bold)),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text("Người gửi: ${request.Name}"),
+                          Text("SĐT: ${request.sdt}"),
+                          Text("Mô tả: ${request.moTa}"),
+                          Text(
+                            'Lúc: ${_dateFormat.format(request.thoiGian)}', // Sử dụng thuộc tính thoiGian từ RequestModel
+                            style: const TextStyle(fontSize: 12, color: Colors.grey),
+                          ),
+                          // Bạn có thể thêm FutureBuilder để hiển thị tên phòng nếu cần
+                          // FutureBuilder<String>(
+                          //   future: _getRoomTitleForRequest(request.roomId),
+                          //   builder: (context, roomSnapshot) {
+                          //     return Text("Phòng: ${roomSnapshot.data ?? 'Đang tải...'}");
+                          //   },
+                          // ),
+                        ],
+                      ),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (isSuaChua)
+                            Tooltip(
+                              message: "Xử lý sửa chữa",
+                              child: IconButton(
+                                icon: const Icon(Icons.construction, color: Colors.orange),
+                                onPressed: () {
+                                    Navigator.pop(context); // Đóng dialog hiện tại
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => SuaChua( // Đảm bảo SuaChua là một widget
+                                          roomId: request.roomId,
+                                          tenantId: request.userKhachId,
+                                          // requestId: request.id, // Có thể truyền requestId để cập nhật
+                                        ),
+                                      ),
+                                    );
+                                },
                               ),
-                              TextButton(
-                                onPressed: () => Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => SuaChua(
-                                      roomId: roomId,
-                                      tenantId: tenantId,
-                                    ),
+                            ),
+                          Tooltip(
+                            message: "Xóa yêu cầu",
+                            child: IconButton(
+                              icon: const Icon(Icons.delete_forever_outlined, color: Colors.redAccent),
+                              onPressed: () async {
+                                final confirm = await showDialog<bool>(
+                                  context: context,
+                                  builder: (_) => AlertDialog(
+                                    title: const Text('Xác nhận xóa'),
+                                    content: const Text('Bạn có chắc muốn xóa yêu cầu này không?'),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () => Navigator.pop(context, false),
+                                        child: const Text('Hủy'),
+                                      ),
+                                      TextButton(
+                                        onPressed: () => Navigator.pop(context, true),
+                                        child: const Text('Xóa', style: TextStyle(color: Colors.red)),
+                                      ),
+                                    ],
                                   ),
-                                ),
-                                child: const Text('Xác nhận'),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.delete, color: Colors.red),
-                      onPressed: () async {
-                        final confirm = await showDialog<bool>(
-                          context: context,
-                          builder: (_) => AlertDialog(
-                            title: const Text('Xác nhận'),
-                            content: const Text('Bạn có chắc muốn xóa yêu cầu này không?'),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.pop(context, false),
-                                child: const Text('Hủy'),
-                              ),
-                              TextButton(
-                                onPressed: () => Navigator.pop(context, true),
-                                child: const Text('Xóa'),
-                              ),
-                            ],
-                          ),
-                        );
+                                );
 
-                        if (confirm == true) {
-                          await deleteRequestById(localDocs[index].id);
-                          setState(() {
-                            localDocs.removeAt(index);
-                          });
-                        }
-                      },
+                                if (confirm == true) {
+                                  await deleteRequestById(request.id); // Sử dụng request.id từ model
+                                  // Không cần setState ở đây nếu RequestDialog là StatelessWidget
+                                  // và bạn muốn dialog tự đóng hoặc danh sách làm mới từ StreamBuilder cha.
+                                  // Nếu muốn cập nhật ngay lập tức trong dialog mà không đóng,
+                                  // RequestDialog cần là StatefulWidget và bạn sẽ gọi setState.
+                                  // Tạm thời, giả sử dialog sẽ đóng và danh sách bên ngoài tự cập nhật.
+                                   Navigator.pop(context); // Đóng dialog sau khi xóa
+                                   ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('Đã xóa yêu cầu của ${request.Name}')),
+                                  );
+                                }
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ],
-                ),
-              );
-            },
-          ),
-        );
-      },
-    ),
-    actions: [
-      TextButton(
-        onPressed: () => Navigator.pop(context),
-        child: const Text('Đóng'),
+                  );
+                },
+              ),
       ),
-    ],
-  );
-}
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Đóng'),
+        ),
+      ],
+    );
+  }
 }

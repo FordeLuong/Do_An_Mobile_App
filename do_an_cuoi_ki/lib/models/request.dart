@@ -1,8 +1,11 @@
 // File: models/request_model.dart
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+<<<<<<< Updated upstream
 // Giả sử RoomStatus được định nghĩa trong models/room.dart
 // Bạn cần import nó nếu RoomStatus được sử dụng trong hàm kiểm tra (ví dụ: kiểm tra status của phòng)
+=======
+>>>>>>> Stashed changes
 import 'package:do_an_cuoi_ki/models/room.dart'; // Đảm bảo đường dẫn này đúng
 
 
@@ -40,7 +43,10 @@ extension RequestTypeExtension on RequestType {
     }
   }
 
+<<<<<<< Updated upstream
   // Hàm helper để lấy tên hiển thị đẹp hơn (tùy chọn)
+=======
+>>>>>>> Stashed changes
   String getDisplayName() {
     switch (this) {
       case RequestType.thuePhong:
@@ -58,9 +64,15 @@ class RequestModel {
   final String id;
   final RequestType loaiRequest;
   final String moTa;
+<<<<<<< Updated upstream
   final String roomId; // ID của phòng liên quan đến yêu cầu
   final String userKhachId; // ID của người dùng tạo yêu cầu
   final DateTime thoiGian;
+=======
+  final String roomId;
+  final String userKhachId;
+  final DateTime thoiGian; // Vẫn là DateTime trong model Dart
+>>>>>>> Stashed changes
   final String sdt;
   final String Name;
 
@@ -76,12 +88,45 @@ class RequestModel {
   });
 
   factory RequestModel.fromJson(Map<String, dynamic> json) {
+<<<<<<< Updated upstream
   DateTime _parseFirestoreDateTime(dynamic fieldValue) {
     if (fieldValue == null) return DateTime.now(); // Hoặc xử lý null theo cách khác
     if (fieldValue is Timestamp) return fieldValue.toDate(); // QUAN TRỌNG
     if (fieldValue is String) return DateTime.tryParse(fieldValue) ?? DateTime.now();
     print("Warning: Unknown type for DateTime field, defaulting to now. Value: $fieldValue, Type: ${fieldValue.runtimeType}");
     return DateTime.now();
+=======
+    DateTime _parseDateTimeFromString(dynamic fieldValue) {
+      if (fieldValue == null) {
+        print("Warning: DateTime field 'thoi_gian' is null, defaulting to now.");
+        return DateTime.now();
+      }
+      if (fieldValue is String) {
+        // Cố gắng parse String, nếu không được thì trả về DateTime.now()
+        // Bạn có thể muốn xử lý lỗi parse chặt chẽ hơn ở đây nếu cần
+        DateTime? parsedDate = DateTime.tryParse(fieldValue);
+        if (parsedDate == null) {
+          print("Warning: Could not parse DateTime string '$fieldValue', defaulting to now.");
+          return DateTime.now();
+        }
+        return parsedDate;
+      }
+      // Nếu không phải String (và cũng không phải null), đó là kiểu không mong đợi
+      print("Warning: Expected String for DateTime field 'thoi_gian' but got ${fieldValue.runtimeType}. Value: $fieldValue. Defaulting to now.");
+      return DateTime.now();
+    }
+
+    return RequestModel(
+      id: json['id'] as String? ?? json['request_id'] as String? ?? '',
+      loaiRequest: RequestTypeExtension.fromJson(json['loai_request'] as String? ?? 'sua_chua'),
+      moTa: json['mo_ta'] as String? ?? '',
+      roomId: json['room_id'] as String? ?? '',
+      userKhachId: json['user_khach_id'] as String? ?? '',
+      thoiGian: _parseDateTimeFromString(json['thoi_gian']), // CHỈ XỬ LÝ STRING
+      sdt: json['sdt'] as String? ?? '',
+      Name: json['Name'] as String? ?? '',
+    );
+>>>>>>> Stashed changes
   }
 
   return RequestModel(
@@ -103,13 +148,18 @@ class RequestModel {
       'mo_ta': moTa,
       'room_id': roomId,
       'user_khach_id': userKhachId,
+<<<<<<< Updated upstream
       'thoi_gian': Timestamp.fromDate(thoiGian), // Lưu là Timestamp
+=======
+      'thoi_gian': thoiGian.toIso8601String(), // Vẫn lưu là String ISO 8601
+>>>>>>> Stashed changes
       'sdt': sdt,
       'Name': Name
     };
   }
 
   RequestModel copyWith({
+    // ... (copyWith giữ nguyên)
     String? id,
     RequestType? loaiRequest,
     String? moTa,
@@ -133,26 +183,42 @@ class RequestModel {
 }
 
 // --- HÀM HELPER LIÊN QUAN ĐẾN REQUEST ---
+<<<<<<< Updated upstream
 
 /// Kiểm tra xem người dùng có đang thuê phòng nào không.
 ///
 /// Trả về `true` nếu người dùng đang thuê ít nhất một phòng có trạng thái 'rented',
 /// ngược lại trả về `false`.
 Future<bool> checkIfUserIsCurrentlyRenting(String userId) async {
+=======
+Future<bool> checkIfUserIsCurrentlyRenting(String userId) async {
+  // ... (checkIfUserIsCurrentlyRenting giữ nguyên)
+>>>>>>> Stashed changes
   if (userId.isEmpty) {
     print("checkIfUserIsCurrentlyRenting: userId is empty, returning false.");
     return false;
   }
   try {
     final querySnapshot = await FirebaseFirestore.instance
+<<<<<<< Updated upstream
         .collection('rooms') // Tên collection chứa thông tin phòng
         .where('currentTenantId', isEqualTo: userId)
         .where('status', isEqualTo: RoomStatus.rented.toJson()) // Sử dụng RoomStatus từ model phòng
         .limit(1) // Chỉ cần tìm một phòng là đủ
+=======
+        .collection('rooms')
+        .where('currentTenantId', isEqualTo: userId)
+        .where('status', isEqualTo: RoomStatus.rented.toJson())
+        .limit(1)
+>>>>>>> Stashed changes
         .get();
     return querySnapshot.docs.isNotEmpty;
   } catch (e) {
     print("Lỗi khi kiểm tra trạng thái thuê phòng của người dùng $userId: $e");
+<<<<<<< Updated upstream
     return false; // Mặc định là chưa thuê nếu có lỗi xảy ra
+=======
+    return false;
+>>>>>>> Stashed changes
   }
 }

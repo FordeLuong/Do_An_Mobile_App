@@ -16,10 +16,10 @@ class TrangChu extends StatelessWidget {
 
   // Các biến trạng thái cho bộ lọc (ví dụ)
   // Bạn sẽ cần quản lý trạng thái này thực tế hơn (ví dụ dùng StatefulWidget hoặc State Management)
-  String _selectedKhuVuc = 'Toàn quốc';
-  String _selectedLoaiHinh = 'Phòng trọ';
-  String _selectedMucGia = 'Tất cả';
-  String _selectedSapXep = 'Tin mới trước';
+  final String _selectedKhuVuc = 'Toàn quốc';
+  final String _selectedLoaiHinh = 'Phòng trọ';
+  final String _selectedMucGia = 'Tất cả';
+  final String _selectedSapXep = 'Tin mới trước';
 
 
   @override
@@ -154,7 +154,7 @@ class TrangChu extends StatelessWidget {
                             onChanged: (String? newValue) {
                               // setState(() { _selectedKhuVuc = newValue!; }); // Cần StatefulWidget
                                ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text('Đã chọn khu vực: ${newValue}')),
+                                SnackBar(content: Text('Đã chọn khu vực: $newValue')),
                               );
                             },
                           ),

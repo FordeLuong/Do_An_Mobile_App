@@ -1,12 +1,7 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:do_an_cuoi_ki/models/user.dart';
-import 'package:do_an_cuoi_ki/screens/owner/add_room_for_building.dart';
 import 'package:do_an_cuoi_ki/screens/owner/add_room_screen.dart';
 import 'package:do_an_cuoi_ki/screens/owner/bando.dart';
-import 'package:do_an_cuoi_ki/screens/owner/room_list_screen.dart';
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
-import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'building_list.dart';
 
 class HomeScreenWithBottomNav extends StatefulWidget {

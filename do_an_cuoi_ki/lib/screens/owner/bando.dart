@@ -8,7 +8,7 @@ import 'package:latlong2/latlong.dart';
 class MapScreen extends StatefulWidget {
   final UserModel currentUser;
 
-  const MapScreen({Key? key, required this.currentUser}) : super(key: key);
+  const MapScreen({super.key, required this.currentUser});
 
   @override
   _MapScreenState createState() => _MapScreenState();

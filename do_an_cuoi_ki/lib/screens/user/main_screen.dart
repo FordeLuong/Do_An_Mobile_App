@@ -29,7 +29,7 @@ class _MainScreenState extends State<BuildingListScreen> {
   @override
   Widget build(BuildContext context) {
     // Các màn hình với callback để cập nhật currentUser
-    final List<Widget> _screens = [
+    final List<Widget> screens = [
       TrangChu(
         currentUser: currentUser,
         onUserUpdated: updateCurrentUser,
@@ -52,7 +52,7 @@ class _MainScreenState extends State<BuildingListScreen> {
     ];
 
     return Scaffold(
-      body: _screens[_currentIndex],
+      body: screens[_currentIndex],
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: (index) => setState(() => _currentIndex = index),
