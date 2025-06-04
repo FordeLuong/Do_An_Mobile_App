@@ -20,10 +20,13 @@ class RoomListScreen extends StatelessWidget {
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
   const RoomListScreen({super.key, required this.buildingId, required this.ownerID, required this.currentUser});
 
   
 =======
+=======
+>>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
 =======
@@ -40,6 +43,9 @@ class RoomListScreen extends StatelessWidget {
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
