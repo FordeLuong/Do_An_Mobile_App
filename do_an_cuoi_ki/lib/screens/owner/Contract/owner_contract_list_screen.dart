@@ -2,10 +2,10 @@
 
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:do_an_cuoi_ki/models/contract/contract.dart'; // Đảm bảo import đúng ContractModel
+import 'package:do_an_cuoi_ki/models/contract/contract.dart';
 import 'package:do_an_cuoi_ki/models/contract/contract_status.dart';
-import 'package:do_an_cuoi_ki/models/user.dart';
-import 'package:intl/intl.dart';
+import 'package:do_an_cuoi_ki/models/user.dart'; // Đảm bảo UserModel có trường id
+import 'package:intl/intl.dart'; // Cho NumberFormat và DateFormat
 
 class OwnerContractListScreen extends StatefulWidget {
   final UserModel currentUser;
@@ -19,17 +19,21 @@ class OwnerContractListScreen extends StatefulWidget {
 class _OwnerContractListScreenState extends State<OwnerContractListScreen> {
   final DateFormat _dateFormat = DateFormat('dd/MM/yyyy');
 
-  Future<String> _getTenantName(String tenantId) async {
-    if (tenantId.isEmpty) return "Chưa có";
+  Future<String> _getTenantName(String userIdFromContract) async {
+    if (userIdFromContract.isEmpty) return "Chưa có người thuê";
     try {
-      final doc = await FirebaseFirestore.instance.collection('users').doc(tenantId).get();
+      final doc = await FirebaseFirestore.instance.collection('users').doc(userIdFromContract).get();
       if (doc.exists && doc.data() != null) {
-        return doc.data()!['userName'] as String? ?? 'Người thuê không tên';
+        // SỬA Ở ĐÂY: Thay 'userName' thành 'name' để khớp với cấu trúc Firestore của bạn
+        return doc.data()!['name'] as String? ?? 'Người thuê không tên (trường name null)';
+      } else {
+        print("Không tìm thấy người dùng với ID: $userIdFromContract trong collection 'users'");
+        return "Người thuê không tồn tại (ID: $userIdFromContract)";
       }
     } catch (e) {
-      print("Lỗi khi lấy tên người thuê: $e");
+      print("Lỗi khi lấy tên người thuê (ID: $userIdFromContract): $e");
     }
-    return "ID: $tenantId";
+    return "ID: $userIdFromContract (Lỗi tải tên)";
   }
 
   Future<String> _getRoomTitle(String roomId) async {
@@ -38,14 +42,16 @@ class _OwnerContractListScreenState extends State<OwnerContractListScreen> {
       final doc = await FirebaseFirestore.instance.collection('rooms').doc(roomId).get();
       if (doc.exists && doc.data() != null) {
         return doc.data()!['title'] as String? ?? 'Phòng không tên';
+      } else {
+        print("Không tìm thấy phòng với ID: $roomId trong collection 'rooms'");
+        return "Phòng không tồn tại (ID: $roomId)";
       }
     } catch (e) {
-      print("Lỗi khi lấy tên phòng: $e");
+      print("Lỗi khi lấy tên phòng ($roomId): $e");
     }
-    return "ID: $roomId";
+    return "ID: $roomId (Lỗi tải tên phòng)";
   }
 
-  // Ví dụ hàm xử lý khi nhấn vào hợp đồng (bạn có thể mở màn hình chi tiết)
   void _viewContractDetails(BuildContext context, ContractModel contract) {
     showDialog(
       context: context,
@@ -55,14 +61,15 @@ class _OwnerContractListScreenState extends State<OwnerContractListScreen> {
           content: SingleChildScrollView(
             child: ListBody(
               children: <Widget>[
-                _buildDetailRow("ID Hợp đồng:", contract.id),
+                _buildDetailRow("ID Hợp đồng:", contract.id.isNotEmpty ? contract.id : "N/A"),
                 FutureBuilder<String>(
                   future: _getRoomTitle(contract.roomId),
-                  builder: (context, snapshot) => _buildDetailRow("Phòng:", snapshot.data ?? "Đang tải..."),
+                  builder: (context, snapshot) => _buildDetailRow("Phòng:", snapshot.data ?? (snapshot.connectionState == ConnectionState.waiting ? "Đang tải..." : "N/A")),
                 ),
                 FutureBuilder<String>(
+                  // tenantId từ contract chính là ID của user cần tìm
                   future: _getTenantName(contract.tenantId),
-                  builder: (context, snapshot) => _buildDetailRow("Người Thuê:", snapshot.data ?? "Đang tải..."),
+                  builder: (context, snapshot) => _buildDetailRow("Người Thuê:", snapshot.data ?? (snapshot.connectionState == ConnectionState.waiting ? "Đang tải..." : "N/A")),
                 ),
                 _buildDetailRow("Ngày Bắt Đầu:", _dateFormat.format(contract.startDate)),
                 _buildDetailRow("Ngày Kết Thúc:", _dateFormat.format(contract.endDate)),
@@ -76,6 +83,11 @@ class _OwnerContractListScreenState extends State<OwnerContractListScreen> {
                   const SizedBox(height: 10),
                   Text("Điều Khoản:", style: TextStyle(fontWeight: FontWeight.bold)),
                   Text(contract.termsAndConditions!),
+                ],
+                 if (contract.paymentHistoryIds != null && contract.paymentHistoryIds!.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  Text("IDs Lịch sử TT:", style: TextStyle(fontWeight: FontWeight.bold)),
+                  Text(contract.paymentHistoryIds!.join(', ')),
                 ],
               ],
             ),
@@ -112,20 +124,21 @@ class _OwnerContractListScreenState extends State<OwnerContractListScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text("Danh sách hợp đồng"),
-        backgroundColor: Colors.indigo.shade700,
       ),
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
             .collection('contracts')
-            .where('ownerId', isEqualTo: widget.currentUser.id)
-            .orderBy('createdAt', descending: true) // Sắp xếp theo String ISO 8601 vẫn khá ổn
+            .where('ownerId', isEqualTo: widget.currentUser.id) // Đảm bảo widget.currentUser.id là chính xác
+            .orderBy('createdAt', descending: true)
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
           if (snapshot.hasError) {
-            return Center(child: Text("Đã xảy ra lỗi: ${snapshot.error}"));
+            print("Lỗi Stream Firestore (OwnerContractListScreen): ${snapshot.error}");
+            print("Stack trace: ${snapshot.stackTrace}");
+            return Center(child: Text("Đã xảy ra lỗi: ${snapshot.error}\nKiểm tra log để biết chi tiết. Đảm bảo chỉ mục Firestore đã được tạo."));
           }
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
             return Center(
@@ -156,9 +169,18 @@ class _OwnerContractListScreenState extends State<OwnerContractListScreen> {
                 }
                 contract = ContractModel.fromJson(data);
               } catch (e,s) {
-                print("Lỗi parse ContractModel: $e. Data: ${contractDoc.data()}");
+                print("Lỗi parse ContractModel (ID: ${contractDoc.id}): $e. \nData: ${contractDoc.data()}");
                 print("Stack Trace: $s");
-                return Card( /* ... Card lỗi ... */ );
+                return Card(
+                  color: Colors.red.shade50,
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Text(
+                      "Lỗi hiển thị hợp đồng (ID: ${contractDoc.id}).\nChi tiết lỗi: $e\nVui lòng kiểm tra định dạng dữ liệu trên Firestore, đặc biệt là các trường ngày tháng.",
+                      style: TextStyle(color: Colors.red.shade900),
+                    ),
+                  ),
+                );
               }
 
               return Card(
@@ -205,9 +227,9 @@ class _OwnerContractListScreenState extends State<OwnerContractListScreen> {
                         ),
                         const Divider(height: 16),
                         FutureBuilder<String>(
-                          future: _getTenantName(contract.tenantId),
+                          future: _getTenantName(contract.tenantId), // tenantId từ contract
                           builder: (context, snapshot) {
-                            return _buildInfoRow(Icons.person_outline, "Người thuê:", snapshot.data ?? (snapshot.connectionState == ConnectionState.waiting ? "Đang tải..." : "N/A"));
+                            return _buildInfoRow(Icons.person_outline, "Người thuê:", snapshot.data ?? (snapshot.connectionState == ConnectionState.waiting ? "Đang tải..." : "Chưa có"));
                           },
                         ),
                         _buildInfoRow(Icons.calendar_today_outlined, "Từ ngày:", _dateFormat.format(contract.startDate)),
@@ -248,31 +270,23 @@ class _OwnerContractListScreenState extends State<OwnerContractListScreen> {
     );
   }
 
-  Color _getStatusColor(ContractStatus status) {
+ Color _getStatusColor(ContractStatus status) {
     switch (status) {
-      case ContractStatus.active:
-        return Colors.green.shade600;
-      case ContractStatus.pending:
-        return Colors.blue.shade600;
-      case ContractStatus.expired:
-        return Colors.orange.shade700;
-      case ContractStatus.terminated:
-        return Colors.purple.shade600;
-      case ContractStatus.cancelled:
-        return Colors.red.shade700;
-      default:
-        return Colors.grey;
+      case ContractStatus.active: return Colors.green.shade600;
+      case ContractStatus.pending: return Colors.blue.shade600;
+      case ContractStatus.expired: return Colors.orange.shade700;
+      case ContractStatus.terminated: return Colors.purple.shade600;
+      case ContractStatus.cancelled: return Colors.red.shade700;
     }
   }
 
   Color _getStatusBorderColor(ContractStatus status) {
-    switch (status) {
-      case ContractStatus.active:
-        return Colors.green.shade300;
-      case ContractStatus.pending:
-        return Colors.blue.shade300;
-      default:
-        return Colors.grey.shade300;
+     switch (status) {
+      case ContractStatus.active: return Colors.green.shade300;
+      case ContractStatus.pending: return Colors.blue.shade300;
+      case ContractStatus.expired: return Colors.orange.shade300;
+      case ContractStatus.terminated: return Colors.purple.shade300;
+      case ContractStatus.cancelled: return Colors.red.shade300;
     }
   }
 }

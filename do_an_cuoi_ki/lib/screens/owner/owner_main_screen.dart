@@ -4,10 +4,12 @@ import 'package:do_an_cuoi_ki/screens/owner/bando.dart';
 import 'package:flutter/material.dart';
 import 'building_list.dart';
 import 'owner_account_screen.dart';
+import 'package:do_an_cuoi_ki/screens/user/taikhoan.dart';
 
 class HomeScreenWithBottomNav extends StatefulWidget {
   final UserModel currentUser;
   const HomeScreenWithBottomNav({super.key, required this.currentUser});
+  // Hàm cập nhật currentUser từ các widget con
 
   @override
   State<HomeScreenWithBottomNav> createState() => _HomeScreenWithBottomNavState();
@@ -15,9 +17,14 @@ class HomeScreenWithBottomNav extends StatefulWidget {
 
 class _HomeScreenWithBottomNavState extends State<HomeScreenWithBottomNav> {
   int _selectedIndex = 0;
+  UserModel? currentUser;
 
   late final List<Widget> _screens;
-
+  void updateCurrentUser(UserModel? user) {
+    setState(() {
+      currentUser = user;
+    });
+  }
   @override
   void initState() {
     super.initState();
