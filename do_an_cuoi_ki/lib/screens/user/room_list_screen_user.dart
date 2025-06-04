@@ -12,7 +12,7 @@ class RoomListScreen_User extends StatelessWidget {
 
 
   void showCreateRequestDialog(BuildContext context, String buildingId, String userId) {
-  final _formKey = GlobalKey<FormState>();
+  final formKey = GlobalKey<FormState>();
   RequestType selectedType = RequestType.thuePhong;
   final TextEditingController moTaController = TextEditingController();
 
@@ -22,7 +22,7 @@ class RoomListScreen_User extends StatelessWidget {
       return AlertDialog(
         title: const Text('Tạo yêu cầu mới'),
         content: Form(
-          key: _formKey,
+          key: formKey,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -55,7 +55,7 @@ class RoomListScreen_User extends StatelessWidget {
           ),
           ElevatedButton(
             onPressed: () async {
-              if (_formKey.currentState!.validate()) {
+              if (formKey.currentState!.validate()) {
                 final request = RequestModel(
                   id: FirebaseFirestore.instance.collection('requests').doc().id,
                   loaiRequest: selectedType,
