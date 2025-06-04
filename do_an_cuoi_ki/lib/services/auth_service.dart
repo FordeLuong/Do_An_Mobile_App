@@ -1,9 +1,9 @@
+import 'package:do_an_cuoi_ki/screens/user/main_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:do_an_cuoi_ki/screens/auth/login_screen.dart';
 import 'package:do_an_cuoi_ki/models/user.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
 class AuthService {
   static Future<void> signOut(BuildContext context, Function(UserModel?) onUserUpdated) async {
     try {
@@ -36,7 +36,7 @@ class AuthService {
         // Chuyển hướng về màn hình đăng nhập và xóa stack điều hướng
         Navigator.pushAndRemoveUntil(
           context,
-          MaterialPageRoute(builder: (context) => LoginPage()),
+          MaterialPageRoute(builder: (context) => BuildingListScreen()),
           (route) => false,
         );
       } else {
