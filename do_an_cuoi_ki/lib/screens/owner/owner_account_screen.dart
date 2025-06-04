@@ -3,13 +3,14 @@
 import 'package:do_an_cuoi_ki/models/user.dart';
 import 'package:flutter/material.dart';
 import 'contract/owner_contract_list_screen.dart';
+import 'package:do_an_cuoi_ki/screens/user/taikhoan.dart';
 // Import các màn hình quản lý tương ứng (bạn cần tạo các màn hình này)
 // import 'package:do_an_cuoi_ki/screens/owner/manage_buildings_screen.dart';
 // import 'package:do_an_cuoi_ki/screens/owner/manage_invoices_screen.dart';
 // import 'package:do_an_cuoi_ki/screens/owner/manage_utilities_screen.dart'; // Điện nước
 // import 'package:do_an_cuoi_ki/screens/owner/manage_repair_requests_screen.dart'; // Phiếu sửa chữa
 // import 'package:do_an_cuoi_ki/screens/owner/manage_contracts_screen.dart'; // Hợp đồng
-
+import 'package:do_an_cuoi_ki/services/auth_service.dart';
 // Model cho một mục quản lý trên lưới
 class ManagementItem {
   final String title;
@@ -95,11 +96,10 @@ class OwnerAccountScreen extends StatelessWidget {
         title: 'Đăng xuất',
         icon: Icons.logout_outlined,
         onTap: () {
-          // TODO: Xử lý đăng xuất
-          print('Handle Logout');
-           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Xử lý đăng xuất...'))
-          );
+          // Gọi AuthService.signOut
+          AuthService.signOut(context, (UserModel? user) {
+            // Callback rỗng vì AuthService.signOut đã xử lý chuyển hướng
+          });
         },
       ),
     ];

@@ -49,6 +49,7 @@ dependencies:
   geocoding: ^2.1.0
   geolocator: ^12.0.0
   flutter_carousel_widget: ^2.1.0
+  shared_preferences: ^2.3.0 # Sử dụng phiên bản mới nhất, kiểm tra trên pub.dev để lấy version mới hơn nếu cần
   
 dev_dependencies:
   flutter_test:

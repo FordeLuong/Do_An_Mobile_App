@@ -6,6 +6,7 @@ import 'package:do_an_cuoi_ki/screens/auth/login_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:do_an_cuoi_ki/services/auth_service.dart'; // Import AuthService để sử dụng
 
 class AccountScreen extends StatefulWidget {
   final UserModel? currentUser; // Thay đổi từ UserModel thành UserModel? để hỗ trợ null
@@ -29,27 +30,11 @@ class _AccountScreenState extends State<AccountScreen> {
     setState(() {
       _isLoading = true;
     });
-    try {
-      await FirebaseAuth.instance.signOut();
-      widget.onUserUpdated(null); // Cập nhật trạng thái người dùng thành null
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Đăng xuất thành công!')),
-        );
-        // Không cần Navigator.pop vì BottomNavigationBar sẽ tự động chuyển tab
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Lỗi đăng xuất: $e')),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+    await AuthService.signOut(context, widget.onUserUpdated); // Sử dụng AuthService
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+      });
     }
   }
 
