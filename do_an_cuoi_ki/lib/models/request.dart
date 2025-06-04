@@ -1,5 +1,11 @@
 // File: models/request_model.dart
 
+import 'package:cloud_firestore/cloud_firestore.dart';
+// Giả sử RoomStatus được định nghĩa trong models/room.dart
+// Bạn cần import nó nếu RoomStatus được sử dụng trong hàm kiểm tra (ví dụ: kiểm tra status của phòng)
+import 'package:do_an_cuoi_ki/models/room.dart'; // Đảm bảo đường dẫn này đúng
+
+
 /// Enum cho loại yêu cầu của khách
 enum RequestType {
   thuePhong,
@@ -12,7 +18,7 @@ extension RequestTypeExtension on RequestType {
   String toJson() {
     switch (this) {
       case RequestType.thuePhong:
-        return 'thue_phong';
+        return 'thue_phong'; // Giữ nguyên snake_case để nhất quán với Firestore
       case RequestType.traPhong:
         return 'tra_phong';
       case RequestType.suaChua:
@@ -33,6 +39,18 @@ extension RequestTypeExtension on RequestType {
         return RequestType.suaChua;
     }
   }
+
+  // Hàm helper để lấy tên hiển thị đẹp hơn (tùy chọn)
+  String getDisplayName() {
+    switch (this) {
+      case RequestType.thuePhong:
+        return 'Thuê phòng';
+      case RequestType.traPhong:
+        return 'Trả phòng';
+      case RequestType.suaChua:
+        return 'Sửa chữa / Báo cáo sự cố';
+    }
+  }
 }
 
 /// Model đại diện cho một yêu cầu của khách
@@ -40,8 +58,8 @@ class RequestModel {
   final String id;
   final RequestType loaiRequest;
   final String moTa;
-  final String roomId;
-  final String userKhachId;
+  final String roomId; // ID của phòng liên quan đến yêu cầu
+  final String userKhachId; // ID của người dùng tạo yêu cầu
   final DateTime thoiGian;
   final String sdt;
   final String Name;
@@ -57,23 +75,27 @@ class RequestModel {
     required this.Name
   });
 
-  /// Tạo từ JSON
   factory RequestModel.fromJson(Map<String, dynamic> json) {
-    return RequestModel(
-      id: json['id'] as String? ?? '',
-      loaiRequest: RequestTypeExtension.fromJson(json['loai_request'] as String? ?? 'sua_chua'),
-      moTa: json['mo_ta'] as String? ?? '',
-      roomId: json['room_id'] as String? ?? '',
-      userKhachId: json['user_khach_id'] as String? ?? '',
-      thoiGian: json['thoi_gian'] != null
-          ? DateTime.parse(json['thoi_gian'] as String)
-          : DateTime.now(),
-      sdt: json['sdt'] as String? ?? '',
-      Name: json['Name'] as String? ?? '',
-    );
+  DateTime _parseFirestoreDateTime(dynamic fieldValue) {
+    if (fieldValue == null) return DateTime.now(); // Hoặc xử lý null theo cách khác
+    if (fieldValue is Timestamp) return fieldValue.toDate(); // QUAN TRỌNG
+    if (fieldValue is String) return DateTime.tryParse(fieldValue) ?? DateTime.now();
+    print("Warning: Unknown type for DateTime field, defaulting to now. Value: $fieldValue, Type: ${fieldValue.runtimeType}");
+    return DateTime.now();
   }
 
-  /// Chuyển sang JSON
+  return RequestModel(
+    id: json['id'] as String? ?? json['request_id'] as String? ?? '', // Kiểm tra các tên trường có thể có cho id
+    loaiRequest: RequestTypeExtension.fromJson(json['loai_request'] as String? ?? 'sua_chua'),
+    moTa: json['mo_ta'] as String? ?? '',
+    roomId: json['room_id'] as String? ?? '',
+    userKhachId: json['user_khach_id'] as String? ?? '',
+    thoiGian: _parseFirestoreDateTime(json['thoi_gian']), // ĐÃ SỬA
+    sdt: json['sdt'] as String? ?? '',
+    Name: json['Name'] as String? ?? '',
+  );
+}
+
   Map<String, dynamic> toJson() {
     return {
       'id': id,
@@ -81,13 +103,12 @@ class RequestModel {
       'mo_ta': moTa,
       'room_id': roomId,
       'user_khach_id': userKhachId,
-      'thoi_gian': thoiGian.toIso8601String(),
+      'thoi_gian': Timestamp.fromDate(thoiGian), // Lưu là Timestamp
       'sdt': sdt,
-      'Name':Name
+      'Name': Name
     };
   }
 
-  /// Tạo bản sao cập nhật (copyWith)
   RequestModel copyWith({
     String? id,
     RequestType? loaiRequest,
@@ -108,5 +129,30 @@ class RequestModel {
       sdt: sdt ?? this.sdt,
       Name: Name ?? this.Name
     );
+  }
+}
+
+// --- HÀM HELPER LIÊN QUAN ĐẾN REQUEST ---
+
+/// Kiểm tra xem người dùng có đang thuê phòng nào không.
+///
+/// Trả về `true` nếu người dùng đang thuê ít nhất một phòng có trạng thái 'rented',
+/// ngược lại trả về `false`.
+Future<bool> checkIfUserIsCurrentlyRenting(String userId) async {
+  if (userId.isEmpty) {
+    print("checkIfUserIsCurrentlyRenting: userId is empty, returning false.");
+    return false;
+  }
+  try {
+    final querySnapshot = await FirebaseFirestore.instance
+        .collection('rooms') // Tên collection chứa thông tin phòng
+        .where('currentTenantId', isEqualTo: userId)
+        .where('status', isEqualTo: RoomStatus.rented.toJson()) // Sử dụng RoomStatus từ model phòng
+        .limit(1) // Chỉ cần tìm một phòng là đủ
+        .get();
+    return querySnapshot.docs.isNotEmpty;
+  } catch (e) {
+    print("Lỗi khi kiểm tra trạng thái thuê phòng của người dùng $userId: $e");
+    return false; // Mặc định là chưa thuê nếu có lỗi xảy ra
   }
 }
