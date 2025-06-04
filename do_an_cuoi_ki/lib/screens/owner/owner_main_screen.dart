@@ -3,6 +3,7 @@ import 'package:do_an_cuoi_ki/screens/owner/add_room_screen.dart';
 import 'package:do_an_cuoi_ki/screens/owner/bando.dart';
 import 'package:flutter/material.dart';
 import 'building_list.dart';
+import 'owner_account_screen.dart';
 
 class HomeScreenWithBottomNav extends StatefulWidget {
   final UserModel currentUser;
@@ -24,7 +25,7 @@ class _HomeScreenWithBottomNavState extends State<HomeScreenWithBottomNav> {
       BuildingListScreen_2(currentUser: widget.currentUser),
       MapScreen(currentUser: widget.currentUser),
       CreateBuildingScreen(currentUser: widget.currentUser),
-      const Center(child: Text('Tài khoản')),
+      OwnerAccountScreen(currentUser: widget.currentUser),
     ];
   }
 
