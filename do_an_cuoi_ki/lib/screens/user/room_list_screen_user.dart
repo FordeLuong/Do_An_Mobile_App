@@ -1,29 +1,28 @@
 // File: screens/user/room_list_screen_user.dart
 
 import 'package:cloud_firestore/cloud_firestore.dart';
-// SỬA IMPORT: Đảm bảo import đúng RequestModel và các hàm liên quan
-import 'package:do_an_cuoi_ki/models/request.dart'; // Đổi từ request.dart thành request_model.dart
+// SỬA IMPORT: Đảm bảo import đúng RequestModel và hàm checkIfUserIsCurrentlyRenting
+import 'package:do_an_cuoi_ki/models/request.dart';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:do_an_cuoi_ki/screens/user/room_detail_screen.dart';
 import 'package:do_an_cuoi_ki/models/room.dart';
-import 'package:intl/intl.dart';
 
 // Helper extension để format tên RequestType (tùy chọn, bạn có thể đặt ở file chung)
-// Bạn có thể đã có extension này trong request_model.dart, nếu vậy không cần định nghĩa lại ở đây
-// extension StringFormattingExtension on String {
-//   String capitalizeFirstLetterPerWord() {
-//     if (isEmpty) return this;
-//     return split(' ').map((word) {
-//       if (word.isEmpty) return '';
-//       if (word.length == 1) return word.toUpperCase();
-//       return word[0].toUpperCase() + word.substring(1).toLowerCase();
-//     }).join(' ');
-//   }
-// }
+extension StringFormattingExtension on String {
+  String capitalizeFirstLetterPerWord() {
+    if (isEmpty) return this;
+    return split(' ').map((word) {
+      if (word.isEmpty) return '';
+      // Xử lý trường hợp từ có thể là '' sau khi split
+      if (word.length == 1) return word.toUpperCase();
+      return word[0].toUpperCase() + word.substring(1).toLowerCase();
+    }).join(' ');
+  }
+}
 
 
-class RoomListScreen_User extends StatefulWidget { // Chuyển thành StatefulWidget
+class RoomListScreen_User extends StatelessWidget {
   final String buildingId;
   final String userId;
   final String sdt;
@@ -37,88 +36,46 @@ class RoomListScreen_User extends StatefulWidget { // Chuyển thành StatefulWi
     required this.userName,
   });
 
-  @override
-  State<RoomListScreen_User> createState() => _RoomListScreen_UserState();
-}
-
-class _RoomListScreen_UserState extends State<RoomListScreen_User> {
-  bool _isCurrentlyRenting = false;
-  bool _isLoadingRentingStatus = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _checkRentingStatus();
-  }
-
-  Future<void> _checkRentingStatus() async {
-    if (!mounted) return;
-    setState(() {
-      _isLoadingRentingStatus = true;
-    });
-    bool renting = await checkIfUserIsCurrentlyRenting(widget.userId);
-    if (mounted) {
-      setState(() {
-        _isCurrentlyRenting = renting;
-        _isLoadingRentingStatus = false;
-      });
-    }
-  }
-
-
+  // Hàm hiển thị dialog tạo yêu cầu đã được cập nhật
   void showCreateRequestDialog(
     BuildContext context,
     String selectedRoomId,
     String userIdOfRequester,
+    // Thêm sdt và userName làm tham số vì hàm này là static method của StatelessWidget
+    // Hoặc bạn có thể truy cập trực tiếp this.sdt, this.userName nếu hàm này không phải static
+    // Tuy nhiên, vì nó được gọi từ bên trong builder, việc truyền rõ ràng là tốt hơn.
     String userSdtForRequest,
     String userNameForRequest,
-  ) async {
-    // Kiểm tra lại ở đây như một lớp bảo vệ thứ hai
-    if (_isCurrentlyRenting) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Bạn đang thuê một phòng. Không thể gửi thêm yêu cầu.')),
-      );
-      return;
-    }
-
+  ) async { // Thêm async
     final formKey = GlobalKey<FormState>();
-    // Không cần gọi lại checkIfUserIsCurrentlyRenting ở đây nữa vì đã kiểm tra ở trên
-    // và _isCurrentlyRenting đã có giá trị.
+
+    // Gọi hàm kiểm tra từ request_model.dart
+    bool isCurrentlyRenting = await checkIfUserIsCurrentlyRenting(userIdOfRequester);
 
     List<RequestType> availableRequestTypes;
     RequestType? defaultSelectedType;
 
-    // Vì đã có kiểm tra _isCurrentlyRenting ở ngoài, logic này sẽ luôn rơi vào trường hợp 'else'
-    // Tuy nhiên, để code rõ ràng và phòng trường hợp, ta vẫn giữ nó.
-    // Nhưng thực tế, nếu _isCurrentlyRenting là true, hàm này sẽ không được gọi.
-    if (_isCurrentlyRenting) { // Logic này sẽ không bao giờ được thực thi nếu kiểm tra bên ngoài hoạt động đúng
-      availableRequestTypes = []; // Không có request nào được phép
-      ScaffoldMessenger.of(context).showSnackBar(
-         const SnackBar(content: Text('Lỗi: Bạn không nên thấy dialog này nếu đang thuê phòng.')),
-      );
-      return; // Thoát sớm
+    if (isCurrentlyRenting) {
+      // Nếu đang thuê phòng, có thể trả phòng hoặc sửa chữa
+      // Nếu logic cho phép thuê nhiều phòng, bạn có thể thêm RequestType.thuePhong ở đây
+      availableRequestTypes = [
+        RequestType.traPhong,
+        RequestType.suaChua,
+      ];
+      defaultSelectedType = RequestType.suaChua;
     } else {
       // Nếu chưa thuê phòng, chỉ có thể yêu cầu thuê phòng
       availableRequestTypes = [RequestType.thuePhong];
       defaultSelectedType = RequestType.thuePhong;
     }
 
-    // Nếu không có loại request nào khả dụng (dù trường hợp này khó xảy ra với logic hiện tại)
-    if (availableRequestTypes.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Hiện không có loại yêu cầu nào phù hợp.')),
-      );
-      return;
-    }
-
-
-    RequestType selectedType = defaultSelectedType!; // Chắc chắn không null vì availableRequestTypes không rỗng
+    RequestType selectedType = defaultSelectedType;
     final TextEditingController moTaController = TextEditingController();
 
     showDialog(
       context: context,
       builder: (dialogContext) {
-        return StatefulBuilder(
+        return StatefulBuilder( // Sử dụng StatefulBuilder để cập nhật Dropdown
           builder: (BuildContext context, StateSetter setStateDialog) {
             return AlertDialog(
               title: const Text('Tạo yêu cầu mới'),
@@ -137,12 +94,13 @@ class _RoomListScreen_UserState extends State<RoomListScreen_User> {
                       items: availableRequestTypes.map((type) {
                         return DropdownMenuItem(
                           value: type,
+                          // Sử dụng getDisplayName từ RequestTypeExtension
                           child: Text(type.getDisplayName()),
                         );
                       }).toList(),
                       onChanged: (value) {
                         if (value != null) {
-                          setStateDialog(() {
+                          setStateDialog(() { // Cập nhật state của dialog
                             selectedType = value;
                           });
                         }
@@ -178,8 +136,8 @@ class _RoomListScreen_UserState extends State<RoomListScreen_User> {
                         roomId: selectedRoomId,
                         userKhachId: userIdOfRequester,
                         thoiGian: DateTime.now(),
-                        sdt: userSdtForRequest,
-                        Name: userNameForRequest,
+                        sdt: userSdtForRequest,   // Sử dụng tham số truyền vào
+                        Name: userNameForRequest, // Sử dụng tham số truyền vào
                       );
 
                       try {
@@ -189,13 +147,11 @@ class _RoomListScreen_UserState extends State<RoomListScreen_User> {
                             .set(request.toJson());
 
                         Navigator.pop(dialogContext);
+                        // mounted check không cần thiết ở đây vì context của ScaffoldMessenger là context gốc
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(content: Text('Gửi yêu cầu thành công')),
                         );
                       } catch (e) {
-                         if (Navigator.canPop(dialogContext)) { // Kiểm tra trước khi pop lần nữa
-                           Navigator.pop(dialogContext);
-                         }
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(content: Text('Lỗi khi gửi yêu cầu: $e')),
                         );
@@ -219,23 +175,21 @@ class _RoomListScreen_UserState extends State<RoomListScreen_User> {
         title: const Text("Danh sách phòng"),
         backgroundColor: Colors.green.shade800,
       ),
-      body: _isLoadingRentingStatus
-          ? const Center(child: CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(Colors.green)))
-          : StreamBuilder<QuerySnapshot>(
+      body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
             .collection('rooms')
-            .where('buildingId', isEqualTo: widget.buildingId)
-            .where('status', isEqualTo: RoomStatus.available.toJson())
+            .where('buildingId', isEqualTo: buildingId)
+            .where('status', isEqualTo: RoomStatus.available.toJson()) // Lấy phòng còn trống
             .snapshots(),
         builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting && !_isLoadingRentingStatus) { // Chỉ hiện loading của stream nếu không phải loading ban đầu
+          if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
           if (snapshot.hasError) {
             return Center(child: Text("Lỗi: ${snapshot.error}"));
           }
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return const Center(child: Text("Không có phòng nào trống trong tòa nhà này."));
+            return const Center(child: Text("Không có phòng nào trống."));
           }
 
           final roomsDocs = snapshot.data!.docs;
@@ -246,7 +200,7 @@ class _RoomListScreen_UserState extends State<RoomListScreen_User> {
               crossAxisCount: 2,
               crossAxisSpacing: 10.0,
               mainAxisSpacing: 10.0,
-              childAspectRatio: 0.7, // Điều chỉnh tỷ lệ này nếu cần
+              childAspectRatio: 0.7,
             ),
             itemCount: roomsDocs.length,
             itemBuilder: (context, index) {
@@ -264,18 +218,23 @@ class _RoomListScreen_UserState extends State<RoomListScreen_User> {
                 return Card(child: Center(child: Text("Lỗi dữ liệu phòng")));
               }
 
-              String imageUrl = currentRoom.imageUrls.isNotEmpty ? currentRoom.imageUrls[0] : '';
+              String imageUrl = '';
+              // Lấy ảnh từ currentRoom đã được parse thay vì data trực tiếp
+              if (currentRoom.imageUrls.isNotEmpty) {
+                imageUrl = currentRoom.imageUrls[0];
+              }
 
               return GestureDetector(
                 onTap: () {
+                  print("Card tapped! Room ID: ${currentRoom.id}");
                   Navigator.push(
                     context,
                     MaterialPageRoute(
                       builder: (context) => RoomDetailScreen(
                         room: currentRoom,
-                        userId: widget.userId, // Sửa: widget.userId
-                        userSdt: widget.sdt,   // Sửa: widget.sdt
-                        userName: widget.userName, // Sửa: widget.userName
+                        userId: userId,
+                        userSdt: sdt,
+                        userName: userName,
                       ),
                     ),
                   );
@@ -289,31 +248,26 @@ class _RoomListScreen_UserState extends State<RoomListScreen_User> {
                     children: [
                       Expanded(
                         flex: 3,
-                        child: imageUrl.isNotEmpty
-                            ? CachedNetworkImage(
-                                imageUrl: imageUrl,
-                                fit: BoxFit.cover,
-                                placeholder: (context, url) => Container(
-                                  color: Colors.grey[300],
-                                  child: const Center(child: CircularProgressIndicator()),
-                                ),
-                                errorWidget: (context, url, error) => Container(
-                                  color: Colors.grey[200],
-                                  child: Icon(Icons.broken_image, color: Colors.grey[400], size: 50),
-                                ),
-                              )
-                            : Container( // Placeholder nếu không có ảnh
-                                color: Colors.grey[200],
-                                child: Icon(Icons.apartment, color: Colors.grey[400], size: 50),
-                              ),
+                        child: CachedNetworkImage(
+                          imageUrl: imageUrl,
+                          fit: BoxFit.cover,
+                          placeholder: (context, url) => Container(
+                            color: Colors.grey[300],
+                            child: const Center(child: CircularProgressIndicator()),
+                          ),
+                          errorWidget: (context, url, error) => Container(
+                            color: Colors.grey[200],
+                            child: Icon(Icons.broken_image, color: Colors.grey[400], size: 50),
+                          ),
+                        ),
                       ),
                       Expanded(
-                        flex: 4, // Tăng flex để có thêm không gian cho text và button
+                        flex: 4,
                         child: Padding(
                           padding: const EdgeInsets.all(8.0),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween, // Để button đẩy xuống dưới
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -326,15 +280,15 @@ class _RoomListScreen_UserState extends State<RoomListScreen_User> {
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    "${NumberFormat("#,##0", "vi_VN").format(currentRoom.price)} VNĐ/tháng",
-                                    style: TextStyle(fontSize: 13, color: Colors.green.shade700, fontWeight: FontWeight.w600),
+                                    "${currentRoom.price.toStringAsFixed(0)} VNĐ/tháng",
+                                    style: TextStyle(fontSize: 13, color: Colors.green.shade700),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                   const SizedBox(height: 2),
                                   Text(
                                     "Diện tích: ${currentRoom.area.toStringAsFixed(1)} m²",
-                                    style: const TextStyle(fontSize: 12, color: Colors.black54),
+                                    style: const TextStyle(fontSize: 12),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                   ),
@@ -344,24 +298,19 @@ class _RoomListScreen_UserState extends State<RoomListScreen_User> {
                                 width: double.infinity,
                                 child: ElevatedButton(
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: _isCurrentlyRenting ? Colors.grey.shade400 : Colors.amber.shade700, // Vô hiệu hóa màu nếu đang thuê
-                                    foregroundColor: _isCurrentlyRenting ? Colors.white : Colors.black87,
+                                    backgroundColor: Colors.amber.shade700,
+                                    foregroundColor: Colors.black87,
                                     padding: const EdgeInsets.symmetric(vertical: 8),
                                     textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                   ),
-                                  onPressed: _isCurrentlyRenting
-                                    ? () { // Hành động khi nút bị "vô hiệu hóa" (thực ra là có onPressed khác)
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          const SnackBar(content: Text('Bạn đang thuê một phòng. Không thể gửi thêm yêu cầu.')),
-                                        );
-                                      }
-                                    : () { // Hành động khi có thể gửi yêu cầu
-                                        showCreateRequestDialog(context, currentRoom.id, widget.userId, widget.sdt, widget.userName);
-                                      },
-                                  child: Text(_isCurrentlyRenting ? 'Đã thuê phòng' : 'Gửi yêu cầu'),
+                                  onPressed: () {
+                                    // Truyền sdt và userName của class vào hàm
+                                    showCreateRequestDialog(context, currentRoom.id, userId, sdt, userName);
+                                  },
+                                  child: const Text('Liên hệ'),
                                 ),
                               ),
                             ],
