@@ -84,7 +84,7 @@ class _CreateBuildingScreenState extends State<CreateBuildingScreen> {
             const SnackBar(content: Text('Quyền truy cập vị trí bị từ chối')),
           );
           // Hiển thị dialog yêu cầu cấp quyền
-          _showPermissionDialog();
+          // _showPermissionDialog();
           return;
         }
       }
@@ -137,31 +137,31 @@ class _CreateBuildingScreenState extends State<CreateBuildingScreen> {
     }
   }
   // Nếu cần hiển thị dialog yêu cầu quyền truy cập vị trí, có thể sử dụng đoạn code sau:(do nó lag văng app nên em ẩn ạạ)
-  void _showPermissionDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Yêu cầu quyền truy cập vị trí'),
-        content: const Text('Ứng dụng cần truy cập vị trí của bạn để hiển thị vị trí hiện tại trên bản đồ. Vui lòng cấp quyền.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Hủy'),
-          ),
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              LocationPermission permission = await Geolocator.requestPermission();
-              if (permission == LocationPermission.whileInUse || permission == LocationPermission.always) {
-                _getCurrentLocation(); // Thử lại sau khi cấp quyền
-              }
-            },
-            child: const Text('Cấp quyền'),
-          ),
-        ],
-      ),
-    );
-  }
+  // void _showPermissionDialog() {
+  //   showDialog(
+  //     context: context,
+  //     builder: (context) => AlertDialog(
+  //       title: const Text('Yêu cầu quyền truy cập vị trí'),
+  //       content: const Text('Ứng dụng cần truy cập vị trí của bạn để hiển thị vị trí hiện tại trên bản đồ. Vui lòng cấp quyền.'),
+  //       actions: [
+  //         TextButton(
+  //           onPressed: () => Navigator.pop(context),
+  //           child: const Text('Hủy'),
+  //         ),
+  //         TextButton(
+  //           onPressed: () async {
+  //             Navigator.pop(context);
+  //             LocationPermission permission = await Geolocator.requestPermission();
+  //             if (permission == LocationPermission.whileInUse || permission == LocationPermission.always) {
+  //               _getCurrentLocation(); // Thử lại sau khi cấp quyền
+  //             }
+  //           },
+  //           child: const Text('Cấp quyền'),
+  //         ),
+  //       ],
+  //     ),
+  //   );
+  // }
 
 
   Future<void> _pickImages() async {
