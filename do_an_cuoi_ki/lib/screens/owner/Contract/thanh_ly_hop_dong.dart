@@ -25,6 +25,12 @@ class _ThanhLyHopDongState extends State<ThanhLyHopDong>
   int _currentStep = 0;
   bool _step1Completed = false;
   bool _step2Completed = false;
+  List<Map<String, dynamic>> compensationData = [
+    {'stt': 1, 'info': '', 'cost': ''},
+  ];
+
+  List<String> violationTerms=[];
+  
 
   @override
   void initState() {
@@ -138,9 +144,6 @@ class _ThanhLyHopDongState extends State<ThanhLyHopDong>
 
  Widget _kiemtraphong(UserModel user, String roomId, VoidCallback onComplete) {
   // Danh sách các khoản bồi thường (ban đầu có 1 dòng trống)
-  List<Map<String, dynamic>> compensationData = [
-    {'stt': 1, 'info': '', 'cost': ''},
-  ];
 
   // Controllers cho các ô nhập liệu
   List<TextEditingController> infoControllers = [
@@ -319,7 +322,7 @@ class _ThanhLyHopDongState extends State<ThanhLyHopDong>
                     );
 
                     // Lưu dữ liệu lên Firestore
-                    await saveCompensationData(compensationData,tmp!.id);
+                    await saveCompensationData(compensationData,tmp!.id,violationTerms);
 
                     // Đóng loading và chuyển bước
                     Navigator.of(context).pop();
@@ -348,8 +351,11 @@ class _ThanhLyHopDongState extends State<ThanhLyHopDong>
 }
 
   Widget _doichieuhopdong(VoidCallback onComplete, String roomId) {
+  // Danh sách điều khoản vi phạm
+  List<String> violationTerms = [];
+  TextEditingController termController = TextEditingController();
+
   return FutureBuilder<ContractModel?>(
-    // Giả sử có hàm fetchContractById để lấy thông tin hợp đồng từ Firestore/API
     future: findActiveContractByRoomId(roomId),
     builder: (context, snapshot) {
       if (snapshot.connectionState == ConnectionState.waiting) {
@@ -366,88 +372,195 @@ class _ThanhLyHopDongState extends State<ThanhLyHopDong>
 
       final contract = snapshot.data!;
 
-      return Column(
-        children: [
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.all(16.0),
-              children: [
-                _buildContractInfoItem('Mã hợp đồng', contract.id),
-                _buildContractInfoItem('Mã phòng', contract.roomId),
-                _buildContractInfoItem('Mã người thuê', contract.tenantId),
-                _buildContractInfoItem('Ngày bắt đầu', 
-                  DateFormat('dd/MM/yyyy').format(contract.startDate)),
-                _buildContractInfoItem('Ngày kết thúc', 
-                  DateFormat('dd/MM/yyyy').format(contract.endDate)),
-                _buildContractInfoItem('Tiền thuê', 
-                  '${NumberFormat.currency(locale: 'vi_VN', symbol: '₫').format(contract.rentAmount)}/tháng'),
-                _buildContractInfoItem('Tiền cọc', 
-                  NumberFormat.currency(locale: 'vi_VN', symbol: '₫').format(contract.depositAmount)),
-                _buildContractInfoItem('Trạng thái', 
-                  contract.status.name), // Giả sử có phương thức displayName trong ContractStatus
-                if (contract.termsAndConditions != null)
-                  _buildContractInfoItem('Điều khoản', contract.termsAndConditions!),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: ElevatedButton(
-              onPressed: () async {
-                try {
-                  // Hiển thị loading indicator
-                  showDialog(
-                    context: context,
-                    barrierDismissible: false,
-                    builder: (context) => const Center(child: CircularProgressIndicator()),
-                  );
+      return StatefulBuilder(
+        builder: (context, setState) {
+          return Column(
+            children: [
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.all(16.0),
+                  children: [
+                    // Thông tin hợp đồng
+                    _buildContractInfoItem('Mã hợp đồng', contract.id),
+                    _buildContractInfoItem('Mã phòng', contract.roomId),
+                    _buildContractInfoItem('Mã người thuê', contract.tenantId),
+                    _buildContractInfoItem('Ngày bắt đầu', 
+                      DateFormat('dd/MM/yyyy').format(contract.startDate)),
+                    _buildContractInfoItem('Ngày kết thúc', 
+                      DateFormat('dd/MM/yyyy').format(contract.endDate)),
+                    _buildContractInfoItem('Tiền thuê', 
+                      '${NumberFormat.currency(locale: 'vi_VN', symbol: '₫').format(contract.rentAmount)}/tháng'),
+                    _buildContractInfoItem('Tiền cọc', 
+                      NumberFormat.currency(locale: 'vi_VN', symbol: '₫').format(contract.depositAmount)),
+                    _buildContractInfoItem('Trạng thái', 
+                      contract.status.name),
+                    
+                    // Hiển thị các điều khoản hợp đồng (nếu có)
+                    if (contract.termsAndConditions != null)
+                      _buildContractInfoItem('Điều khoản hợp đồng', contract.termsAndConditions!),
+                    
+                    const SizedBox(height: 20),
+                    const Divider(),
+                    const SizedBox(height: 10),
+                    
+                    // Mục điền điều khoản vi phạm
+                    const Text(
+                      'ĐIỀU KHOẢN VI PHẠM',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        color: Colors.red,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    const Text(
+                      'Liệt kê các điều khoản trong hợp đồng mà khách hàng đã vi phạm:',
+                      style: TextStyle(fontStyle: FontStyle.italic),
+                    ),
+                    const SizedBox(height: 10),
+                    
+                    // Danh sách điều khoản vi phạm
+                    if (violationTerms.isNotEmpty)
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Các điều khoản vi phạm:',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: 5),
+                          ...violationTerms.map((term) => Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 4.0),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.warning_amber, color: Colors.red, size: 16),
+                                const SizedBox(width: 8),
+                                Expanded(child: Text(term)),
+                                IconButton(
+                                  icon: const Icon(Icons.delete, color: Colors.red, size: 18),
+                                  onPressed: () {
+                                    setState(() {
+                                      violationTerms.remove(term);
+                                    });
+                                  },
+                                ),
+                              ],
+                            ),
+                          )).toList(),
+                          const SizedBox(height: 15),
+                        ],
+                      ),
+                    
+                    // Ô nhập điều khoản mới
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: termController,
+                            decoration: const InputDecoration(
+                              hintText: 'Nhập điều khoản vi phạm (VD: Điều 5.2)',
+                              border: OutlineInputBorder(),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        ElevatedButton(
+                          onPressed: () {
+                            if (termController.text.trim().isNotEmpty) {
+                              setState(() {
+                                violationTerms.add(termController.text.trim());
+                                termController.clear();
+                              });
+                            }
+                          },
+                          child: const Text('Thêm'),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                  ],
+                ),
+              ),
+              
+              // Nút hoàn thành
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: ElevatedButton(
+                  onPressed: () async {
+                    try {
+                      // Hiển thị loading indicator
+                      showDialog(
+                        context: context,
+                        barrierDismissible: false,
+                        builder: (context) => const Center(child: CircularProgressIndicator()),
+                      );
 
-                  // Cập nhật trạng thái phòng trong Firestore
-                  await FirebaseFirestore.instance
-                      .collection('rooms')
-                      .doc(contract.roomId) // Sử dụng roomId từ hợp đồng
-                      .update({
-                        'status': 'available',
-                        'updatedAt': FieldValue.serverTimestamp(),
-                        'ownerId':'',
-                      });
-                  await FirebaseFirestore.instance
-                      .collection('contracts')
-                      .doc(contract.id) // Sử dụng roomId từ hợp đồng
-                      .update({
-                        'status': 'expired',
-                        'updatedAt': FieldValue.serverTimestamp(),
-                      });
+                      // Cập nhật trạng thái phòng trong Firestore
+                      await FirebaseFirestore.instance
+                          .collection('rooms')
+                          .doc(contract.roomId)
+                          .update({
+                            'status': 'available',
+                            'updatedAt': FieldValue.serverTimestamp(),
+                            'ownerId': '',
+                          });
 
-                  // Đóng dialog loading
-                  Navigator.of(context).pop();
+                      // Cập nhật trạng thái hợp đồng
+                      await FirebaseFirestore.instance
+                          .collection('contracts')
+                          .doc(contract.id)
+                          .update({
+                            'status': 'expired',
+                            'updatedAt': FieldValue.serverTimestamp(),
+                          });
 
-                  // Gọi callback onComplete nếu cần
-                  onComplete();
+                      // Cập nhật danh sách điều khoản vi phạm vào bản ghi bồi thường
+                      // if (violationTerms.isNotEmpty) {
+                      //   // Tìm bản ghi bồi thường gần nhất
+                      //   final compensationQuery = await FirebaseFirestore.instance
+                      //       .collection('compensations')
+                      //       .where('ContactID', isEqualTo: contract.id)
+                      //       .orderBy('createdAt', descending: true)
+                      //       .limit(1)
+                      //       .get();
 
-                  // Hiển thị thông báo thành công
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Đã cập nhật trạng thái phòng thành công')),
-                  );
-                } catch (e) {
-                  // Đóng dialog loading nếu có lỗi
-                  Navigator.of(context).pop();
-                  
-                  // Hiển thị thông báo lỗi
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Lỗi khi cập nhật: ${e.toString()}')),
-                  );
-                }
-              },
-              child: const Text('Hoàn thành'),
-            ),
-          ),
-        ],
+                      //   if (compensationQuery.docs.isNotEmpty) {
+                      //     await compensationQuery.docs.first.reference.update({
+                      //       'violationTerms': violationTerms,
+                      //     });
+                      //   }
+                      // }
+
+                      // Đóng dialog loading
+                      Navigator.of(context).pop();
+
+                      // Gọi callback onComplete
+                      onComplete();
+
+                      // Hiển thị thông báo thành công
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Đã hoàn thành thanh lý hợp đồng')),
+                      );
+                    } catch (e) {
+                      // Đóng dialog loading nếu có lỗi
+                      Navigator.of(context).pop();
+                      
+                      // Hiển thị thông báo lỗi
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Lỗi khi cập nhật: ${e.toString()}')),
+                      );
+                    }
+                  },
+                  child: const Text('Hoàn thành thanh lý hợp đồng'),
+                ),
+              ),
+            ],
+          );
+        },
       );
     },
   );
 }
-
 // Widget phụ để hiển thị từng thông tin hợp đồng
 Widget _buildContractInfoItem(String label, String value) {
   return Padding(
@@ -524,7 +637,7 @@ Widget _buildContractInfoItem(String label, String value) {
   }
 }
 
-Future<void> saveCompensationData(List<Map<String, dynamic>> compensationData, String ContactID) async {
+Future<void> saveCompensationData(List<Map<String, dynamic>> compensationData, String ContactID,  List<String> violationTerms ) async {
   try {
     // Lấy user hiện tại
 
@@ -548,7 +661,8 @@ Future<void> saveCompensationData(List<Map<String, dynamic>> compensationData, S
       'createdAt': FieldValue.serverTimestamp(),
       'items': validItems,
       'totalAmount': total,
-      'date':DateTime.now()
+      'date':DateTime.now(),
+      'violationTerms':violationTerms
     };
 
     // Lưu lên Firestore

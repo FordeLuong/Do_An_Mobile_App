@@ -55,7 +55,7 @@ class _BillManagementScreenState extends State<BillManagementScreen>
         controller: _tabController,
         children: [
           // Tab 1: Phòng chưa lập hóa đơn
-          _buildUnbilledRoomsTab(currentUser),
+          _buildUnbilledRoomsTab(currentUser, buildingId),
           
           // Tab 2: Hóa đơn chờ thanh toán
           _buildPendingBillsTab(buildingId),
@@ -74,12 +74,12 @@ class _BillManagementScreenState extends State<BillManagementScreen>
     );
   }
 
-  Widget _buildUnbilledRoomsTab(UserModel currentUser) {
+  Widget _buildUnbilledRoomsTab(UserModel currentUser, String buildingId) {
   final now = DateTime.now();
   final currentMonthYear = '${now.month.toString().padLeft(2, '0')}/${now.year}';
 
   return StreamBuilder<QuerySnapshot>(
-    stream: FirebaseFirestore.instance.collection('rooms').where('status',isEqualTo: 'rented').snapshots(),
+    stream: FirebaseFirestore.instance.collection('rooms').where('buildingId', isEqualTo: buildingId).where('status',isEqualTo: 'rented').snapshots(),
     builder: (context, roomsSnapshot) {
       if (roomsSnapshot.connectionState == ConnectionState.waiting) {
         return const Center(child: CircularProgressIndicator());

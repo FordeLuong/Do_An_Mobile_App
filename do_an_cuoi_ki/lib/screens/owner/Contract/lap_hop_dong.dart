@@ -205,14 +205,14 @@ Hai bên thống nhất ký kết hợp đồng thuê trọ với các điều k
 
       batch.update(roomRef, {
         'status': roomNewStatus.toJson(), // Sử dụng trạng thái phòng mới
-        'currentTenantId': _selectedTenantId,
+        'ownerId': _selectedTenantId,
         'updatedAt': DateTime.now().toIso8601String(),
       });
       await batch.commit();
 
       if(mounted){
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Hợp đồng đã được tạo với trạng thái: ${contractStatus.getDisplayName()}')),
+          SnackBar(content: Text('Hợp đồng đã được tạo với trạng thái $_selectedTenantId vvvvvvvvv: ${contractStatus.getDisplayName()}')),
         );
         Navigator.pop(context, true);
       }

@@ -8,6 +8,7 @@ class CompensationModel {
   final double totalAmount; // Sum of all compensation costs
   final DateTime createdAt; // When the compensation was created
   final DateTime date; // Date associated with the compensation
+  final List<String> violationTerms; // List of violated terms
 
   CompensationModel({
     this.id,
@@ -16,6 +17,7 @@ class CompensationModel {
     required this.totalAmount,
     required this.createdAt,
     required this.date,
+    required this.violationTerms, // Thêm trường mới
   });
 
   /// Factory constructor to create CompensationModel from Firestore document
@@ -33,6 +35,7 @@ class CompensationModel {
       totalAmount: (data['totalAmount'] as num?)?.toDouble() ?? 0.0,
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       date: (data['date'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      violationTerms: List<String>.from(data['violationTerms'] as List<dynamic>? ?? []), // Đọc dữ liệu từ Firestore
     );
   }
 
@@ -44,6 +47,7 @@ class CompensationModel {
       'totalAmount': totalAmount,
       'createdAt': FieldValue.serverTimestamp(),
       'date': date,
+      'violationTerms': violationTerms, // Thêm vào dữ liệu Firestore
     };
   }
 
@@ -55,6 +59,7 @@ class CompensationModel {
     double? totalAmount,
     DateTime? createdAt,
     DateTime? date,
+    List<String>? violationTerms, // Thêm vào copyWith
   }) {
     return CompensationModel(
       id: id ?? this.id,
@@ -63,6 +68,7 @@ class CompensationModel {
       totalAmount: totalAmount ?? this.totalAmount,
       createdAt: createdAt ?? this.createdAt,
       date: date ?? this.date,
+      violationTerms: violationTerms ?? this.violationTerms, // Copy giá trị mới
     );
   }
 
