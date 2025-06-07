@@ -35,4 +35,16 @@ extension UserRoleExtension on UserRole {
         return UserRole.customer;
     }
   }
+  String getDisplayName() {
+    switch (this) {
+      case UserRole.customer:
+        return 'Khách hàng';
+      case UserRole.owner:
+        return 'Chủ nhà trọ';
+      case UserRole.admin:
+        return 'Quản trị viên';
+      default: // Mặc dù với enum thì default ít khi xảy ra nếu tất cả case đã được xử lý
+        return toString().split('.').last; // Trả về tên enum nếu không khớp
+    }
+  }
 }
