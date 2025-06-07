@@ -2,6 +2,7 @@
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:do_an_cuoi_ki/screens/owner/owner_main_screen.dart'; // Đường dẫn đến màn hình chính của Owner
+import 'package:do_an_cuoi_ki/screens/user/trang_chu.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../models/user.dart'; // Đường dẫn đến UserModel
@@ -75,13 +76,29 @@ class _LoginPageState extends State<LoginPage> {
       }
     }
   }
+  UserModel? currentUser;  
+  void updateCurrentUser(UserModel? user) {
+    print("MainScreen: updateCurrentUser called with user: ${user?.email}"); // Thêm log
+    if (mounted) {
+      setState(() {
+        currentUser = user;
+        print("MainScreen: currentUser updated to: ${currentUser?.email}"); // Thêm log
+      });
+    } else {
+      print("MainScreen: updateCurrentUser called but widget is not mounted.");
+    }
+  }
 
   void _navigateBasedOnRole(UserModel user) {
     if (!mounted) return;
 
     if (user.role == UserRole.customer) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Đăng nhập Customer thành công! (Màn hình Customer đang chờ...)'))
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(
+          builder: (context) => TrangChu(currentUser: user, onUserUpdated: updateCurrentUser,),
+        ),
+        (route) => false,
       );
       if (Navigator.canPop(context)) Navigator.pop(context, user);
     } else if (user.role == UserRole.owner) {
