@@ -217,7 +217,7 @@ class _OwnerContractListScreenState extends State<OwnerContractListScreen> {
       // Cập nhật trạng thái hợp đồng
       await _firestore.collection('contracts').doc(contract.id).update({
         'status': newStatus.toJson(),
-        'updatedAt': DateTime.now().toIso8601String(), // Cập nhật thời gian
+        'updatedAt': Timestamp.now(), // Cập nhật thời gian
       });
 
       // Xử lý cập nhật trạng thái phòng dựa trên trạng thái hợp đồng mới
@@ -240,7 +240,7 @@ class _OwnerContractListScreenState extends State<OwnerContractListScreen> {
         await _firestore.collection('rooms').doc(contract.roomId).update({
           'status': newRoomStatus.toJson(),
           'currentTenantId': newCurrentTenantId, // Cập nhật hoặc xóa người thuê
-          'updatedAt': DateTime.now().toIso8601String(),
+          'updatedAt': Timestamp.now(),
         });
       }
 
