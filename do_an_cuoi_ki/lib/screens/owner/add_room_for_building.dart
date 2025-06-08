@@ -5,7 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:uuid/uuid.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:do_an_cuoi_ki/models/building.dart';
+
 
 
 class CreateRoomPage extends StatefulWidget {
@@ -24,23 +24,6 @@ class _CreateRoomPageState extends State<CreateRoomPage> {
   String title = '';
   String description = '';
   String address = '';
-
-  // Get building address from Firestore
-  Future<void> fetchBuildingAddress() async {
-    final doc = await FirebaseFirestore.instance.collection('buildings').doc(widget.buildingId).get();
-    if (doc.exists) {
-      setState(() {
-        address = doc.data()?['address'] ?? '';
-      });
-    }
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    fetchBuildingAddress();
-  }
-
   double price = 0;
   double area = 0;
   int capacity = 1;
@@ -148,8 +131,6 @@ class _CreateRoomPageState extends State<CreateRoomPage> {
                     TextFormField(
                       decoration: const InputDecoration(labelText: "Địa chỉ"),
                       onSaved: (value) => address = value ?? '',
-                      enabled: false,
-                      initialValue: address, // Hiển thị địa chỉ từ Firestore
                     ),
                     TextFormField(
                       decoration: const InputDecoration(labelText: "Giá thuê"),

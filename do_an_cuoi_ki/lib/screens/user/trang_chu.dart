@@ -1,7 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:do_an_cuoi_ki/models/user.dart';
 import 'package:do_an_cuoi_ki/screens/auth/login_screen.dart';
-import 'package:do_an_cuoi_ki/screens/auth/register_screen.dart';
 // import 'package:do_an_cuoi_ki/screens/auth/register_screen.dart'; // Bạn có thể thêm lại nếu cần màn hình đăng ký riêng
 
 import 'package:do_an_cuoi_ki/screens/user/room_list_screen_user.dart';
@@ -69,17 +68,13 @@ class TrangChu extends StatelessWidget {
                         if (currentUser == null) ...[
                           const SizedBox(width: 8),
                           OutlinedButton(
-                            onPressed: currentUser == null
-                              ? () async {
-                                  final result = await Navigator.push(
-                                    context,
-                                    MaterialPageRoute(builder: (context) => RegisterPage()),
-                                  );
-                                  if (result != null && result is UserModel) {
-                                    onUserUpdated(result);
-                                  }
-                                }
-                              : null,
+                            onPressed: () {
+                              // Chuyển đến màn hình đăng ký
+                              // Navigator.push(context, MaterialPageRoute(builder: (context) => RegisterScreen()));
+                               ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Chức năng đăng ký sẽ được thêm sau!')),
+                              );
+                            },
                             style: OutlinedButton.styleFrom(
                               side: const BorderSide(color: Colors.white),
                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20))
