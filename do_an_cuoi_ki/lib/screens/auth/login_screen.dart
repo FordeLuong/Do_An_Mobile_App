@@ -101,7 +101,6 @@ class _LoginPageState extends State<LoginPage> {
   void _navigateBasedOnRole(UserModel user) {
     switch (user.role) {
       case UserRole.customer:
-
       Navigator.pop(context, user); // trả dữ liệu về
       break;
       case UserRole.owner:

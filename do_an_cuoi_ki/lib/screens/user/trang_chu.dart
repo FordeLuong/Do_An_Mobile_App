@@ -1,9 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:do_an_cuoi_ki/models/user.dart';
 import 'package:do_an_cuoi_ki/screens/auth/login_screen.dart';
+import 'package:do_an_cuoi_ki/screens/auth/register_screen.dart';
 // import 'package:do_an_cuoi_ki/screens/auth/register_screen.dart'; // Bạn có thể thêm lại nếu cần màn hình đăng ký riêng
 
 import 'package:do_an_cuoi_ki/screens/user/room_list_screen_user.dart';
+import 'package:do_an_cuoi_ki/services/building_service.dart';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:intl/intl.dart';
@@ -69,10 +71,9 @@ class TrangChu extends StatelessWidget {
                           const SizedBox(width: 8),
                           OutlinedButton(
                             onPressed: () {
-                              // Chuyển đến màn hình đăng ký
-                              // Navigator.push(context, MaterialPageRoute(builder: (context) => RegisterScreen()));
-                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Chức năng đăng ký sẽ được thêm sau!')),
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(builder: (context) => RegisterPage()),
                               );
                             },
                             style: OutlinedButton.styleFrom(
@@ -216,10 +217,7 @@ class TrangChu extends StatelessWidget {
           // DANH SÁCH NHÀ TRỌ DẠNG GRID
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance
-                  .collection('buildings')
-                  // .where('managerId', isEqualTo: currentUser.id) // Lọc theo managerId (nếu cần)
-                  .snapshots(),
+              stream: BuildingService().getAllBuildingsStream(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
@@ -350,6 +348,7 @@ class TrangChu extends StatelessWidget {
               },
             ),
           )
+        
         ],
       ),
     );

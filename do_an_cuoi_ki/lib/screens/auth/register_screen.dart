@@ -93,7 +93,7 @@ class _RegisterPageState extends State<RegisterPage> {
             backgroundColor: Colors.green,
           ),
         );
-        Navigator.pushReplacementNamed(context, '/login');
+        Navigator.pushReplacementNamed(context, '/user_building');
       }
 
     } on FirebaseAuthException catch (e) {

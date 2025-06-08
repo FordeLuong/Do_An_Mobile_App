@@ -1,8 +1,7 @@
 import 'dart:io';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:do_an_cuoi_ki/models/building.dart';
 import 'package:do_an_cuoi_ki/models/user.dart';
 import 'package:do_an_cuoi_ki/models/user_role.dart';
+import 'package:do_an_cuoi_ki/services/building_service.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
@@ -24,6 +23,7 @@ class CreateBuildingScreen extends StatefulWidget {
 
 class _CreateBuildingScreenState extends State<CreateBuildingScreen> {
   final _formKey = GlobalKey<FormState>();
+  BuildingService _buildingService =BuildingService();
     
   final FirebaseDatabase database = FirebaseDatabase.instanceFor(
     app: Firebase.app(),
@@ -39,7 +39,7 @@ class _CreateBuildingScreenState extends State<CreateBuildingScreen> {
   final TextEditingController _latitudeController = TextEditingController();
   final TextEditingController _longitudeController = TextEditingController();
 
-  final List<String> _imageUrls = [];
+  List<String> _imageUrls = [];
   bool _isLoading = false;
   bool _isAdmin = false;
   bool _isUploadingImages = false;
@@ -164,113 +164,28 @@ class _CreateBuildingScreenState extends State<CreateBuildingScreen> {
   // }
 
 
-  Future<void> _pickImages() async {
-    final picker = ImagePicker();
-    final pickedFiles = await picker.pickMultiImage(
-      maxWidth: 1024,
-      maxHeight: 1024,
-      imageQuality: 85,
-    );
 
-    if (pickedFiles.isEmpty) return;
+Future<void> _pickImages() async {
+  setState(() {
+    _isUploadingImages = true;
+    _uploadProgress = 0;
+  });
 
-    // Kiểm tra số lượng ảnh
-    if (pickedFiles.length + _imageUrls.length > 10) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Tối đa 10 ảnh được phép tải lên')),
-      );
-      return;
-    }
-
-    setState(() {
-      _isUploadingImages = true;
-      _uploadProgress = 0;
-    });
-
-    try {
-      final storageRef = FirebaseStorage.instance.ref();
-      final List<String> uploadedUrls = [];
-      int uploadedCount = 0;
-
-      for (final pickedFile in pickedFiles) {
-        final String fileName = 'buildings/${DateTime.now().millisecondsSinceEpoch}_${pickedFile.name}';
-        final fileRef = storageRef.child(fileName);
-
-        // Upload với theo dõi tiến trình
-        final uploadTask = fileRef.putFile(File(pickedFile.path));
-
-        uploadTask.snapshotEvents.listen((taskSnapshot) {
-          setState(() {
-            _uploadProgress = (uploadedCount + taskSnapshot.bytesTransferred / taskSnapshot.totalBytes) / pickedFiles.length;
-          });
-        });
-
-        await uploadTask;
-
-        final downloadUrl = await fileRef.getDownloadURL();
-        uploadedUrls.add(downloadUrl);
-        uploadedCount++;
-      }
-
+  final newUrls = await _buildingService.uploadBuildingImages(
+    context: context,
+    existingUrls: _imageUrls,
+    onProgress: (progress) {
       setState(() {
-        _imageUrls.addAll(uploadedUrls);
-        _isUploadingImages = false;
+        _uploadProgress = progress;
       });
-    } catch (e) {
-      setState(() {
-        _isUploadingImages = false;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Lỗi khi tải ảnh: ${e.toString()}')),
-      );
-    }
-  }
+    },
+  );
 
-  // Future<void> _saveBuilding() async {
-  //   if (!_formKey.currentState!.validate()) return;
-  //   if (!_isAdmin) {
-  //     ScaffoldMessenger.of(context).showSnackBar(
-  //       const SnackBar(content: Text('Bạn không có quyền tạo nhà trọ mới')),
-  //     );
-  //     return;
-  //   }
-
-  //   setState(() {
-  //     _isLoading = true;
-  //   });
-    
-  //   try {
-  //     final newBuilding = BuildingModel(
-  //       buildingId: _databaseRef.push().key!,
-  //       buildingName: _nameController.text,
-  //       address: _addressController.text,
-  //       totalRooms: int.parse(_totalRoomsController.text),
-  //       managerName: widget.currentUser.name,
-  //       managerPhone: widget.currentUser.phoneNumber,
-  //       managerId: widget.currentUser.id,
-  //       imageUrls: _imageUrls,
-  //       latitude: double.parse(_latitudeController.text),
-  //       longitude: double.parse(_longitudeController.text),
-  //       createdAt: DateTime.now(),
-  //     );
-
-  //     await _databaseRef.child(newBuilding.buildingId).set(newBuilding.toJson());
-
-  //     ScaffoldMessenger.of(context).showSnackBar(
-  //       const SnackBar(content: Text('Tạo nhà trọ thành công!')),
-  //     );
-  //     Navigator.pop(context);
-  //   } catch (e) {
-  //     ScaffoldMessenger.of(context).showSnackBar(
-  //       SnackBar(content: Text('Lỗi khi tạo nhà trọ: ${e.toString()}')),
-  //     );
-  //   } finally {
-  //     setState(() {
-  //       _isLoading = false;
-  //     });
-  //   }
-  // }
-
+  setState(() {
+    _imageUrls = newUrls;
+    _isUploadingImages = false;
+  });
+}
 
   Future<void> _saveBuilding() async {
     if (!_formKey.currentState!.validate()) return;
@@ -287,26 +202,19 @@ class _CreateBuildingScreenState extends State<CreateBuildingScreen> {
     });
 
     try {
-      final buildingId = FirebaseFirestore.instance.collection('buildings').doc().id;
-
-      final newBuilding = BuildingModel(
-        buildingId: buildingId,
-        buildingName: _nameController.text,
-        address: _addressController.text,
-        totalRooms: int.parse(_totalRoomsController.text),
-        managerName: widget.currentUser.name,
-        managerPhone: widget.currentUser.phoneNumber,
-        managerId: widget.currentUser.id,
-        imageUrls: _imageUrls,
-        latitude: double.parse(_latitudeController.text),
-        longitude: double.parse(_longitudeController.text),
-        createdAt: DateTime.now(),
-      );
-
-      await FirebaseFirestore.instance
-          .collection('buildings')
-          .doc(buildingId)
-          .set(newBuilding.toJson());
+      await BuildingService().createBuilding(
+      context: context,
+      isAdmin: _isAdmin,
+      buildingName: _nameController.text,
+      address: _addressController.text,
+      totalRooms: int.parse(_totalRoomsController.text),
+      managerName: widget.currentUser.name,
+      managerPhone: widget.currentUser.phoneNumber ?? 'Không có sdt',
+      managerId: widget.currentUser.id,
+      imageUrls: _imageUrls,
+      latitude: double.parse(_latitudeController.text),
+      longitude: double.parse(_longitudeController.text),
+    );
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Tạo nhà trọ thành công!')),

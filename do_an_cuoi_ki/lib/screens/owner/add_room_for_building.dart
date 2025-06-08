@@ -1,10 +1,9 @@
 import 'dart:io';
-import 'package:do_an_cuoi_ki/models/room.dart';
+
+import 'package:do_an_cuoi_ki/services/room_service.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:uuid/uuid.dart';
-import 'package:firebase_storage/firebase_storage.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+
 
 
 
@@ -19,6 +18,7 @@ class _CreateRoomPageState extends State<CreateRoomPage> {
   final _formKey = GlobalKey<FormState>();
   final picker = ImagePicker();
   final List<File> _images = [];
+  final RoomService _roomService = RoomService();
 
   // Form fields
   String title = '';
@@ -32,31 +32,13 @@ class _CreateRoomPageState extends State<CreateRoomPage> {
   bool isUploading = false;
 
   Future<void> pickImages() async {
-    final picked = await picker.pickMultiImage();
-    if (picked.isNotEmpty) {
-      setState(() {
-        _images.addAll(picked.map((e) => File(e.path)));
-      });
-    }
+    final images = await _roomService.pickImages();
+    setState(() {
+      _images.addAll(images);
+    });
   }
 
-  Future<List<String>> uploadImages(String roomId) async {
-    List<String> urls = [];
-
-    for (int i = 0; i < _images.length; i++) {
-      final ref = FirebaseStorage.instance
-          .ref()
-          .child('rooms')
-          .child(roomId)
-          .child('img_$i.jpg');
-
-      await ref.putFile(_images[i]);
-      final url = await ref.getDownloadURL();
-      urls.add(url);
-    }
-
-    return urls;
-  }
+  // 
 
   Future<void> submit() async {
     if (!_formKey.currentState!.validate()) return;
@@ -64,34 +46,23 @@ class _CreateRoomPageState extends State<CreateRoomPage> {
     _formKey.currentState!.save();
     setState(() => isUploading = true);
 
-    final roomId = const Uuid().v4();
-    final ownerId = FirebaseFirestore.instance.app.options.projectId; // Hoặc FirebaseAuth nếu có
+    // final roomId = const Uuid().v4();
+    // final ownerId = FirebaseFirestore.instance.app.options.projectId; // Hoặc FirebaseAuth nếu có
 
     try {
-      final imageUrls = await uploadImages(roomId);
-
-      final room = RoomModel(
-        id: roomId,
+     await _roomService.createRoom(
+        context: context,
         buildingId: widget.buildingId,
-        ownerId: '',
         title: title,
         description: description,
         address: address,
-        latitude: 0,
-        longitude: 0,
         price: price,
         area: area,
         capacity: capacity,
         amenities: amenities,
-        imageUrls: imageUrls,
-        status: RoomStatus.available,
-        createdAt: DateTime.now(),
-        updatedAt: null,
-        sodien: 0,
+        images: _images,
+        // ownerId: currentUser?.id, // Thêm nếu có thông tin user
       );
-
-      await FirebaseFirestore.instance.collection('rooms').doc(roomId).set(room.toJson());
-
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Tạo phòng thành công!")),
       );

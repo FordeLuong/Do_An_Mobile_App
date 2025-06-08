@@ -3,6 +3,7 @@ import 'package:do_an_cuoi_ki/models/user.dart';
 import 'package:do_an_cuoi_ki/screens/owner/add_room_for_building.dart';
 import 'package:do_an_cuoi_ki/screens/owner/lap_hoa_don_hang_thang.dart';
 import 'package:do_an_cuoi_ki/screens/owner/room_list_screen.dart';
+import 'package:do_an_cuoi_ki/services/building_service.dart';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
@@ -14,13 +15,6 @@ class BuildingListScreen_2 extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      // appBar: AppBar(
-      //   title: const Text("Sân gần bạn"),
-      //   backgroundColor: Colors.green.shade800,
-      //   actions: [
-      //     IconButton(onPressed: () {}, icon: const Icon(Icons.search)),
-      //   ],
-      // ),
       body: Column(
         children: [
 
@@ -85,10 +79,7 @@ class BuildingListScreen_2 extends StatelessWidget {
           ),
         Expanded(
           child: StreamBuilder<QuerySnapshot>(
-            stream: FirebaseFirestore.instance
-                .collection('buildings')
-                .where('managerId', isEqualTo: currentUser.id) // Lọc theo managerId
-                .snapshots(),
+            stream: BuildingService().getBuildingsByManagerStream(currentUser.id),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(child: CircularProgressIndicator());
@@ -255,17 +246,7 @@ class BuildingListScreen_2 extends StatelessWidget {
       ],
       
       ),
-      // bottomNavigationBar: BottomNavigationBar(
-      //   type: BottomNavigationBarType.fixed,
-      //   selectedItemColor: const Color.fromARGB(255, 186, 203, 91),
-      //   backgroundColor: Colors.green.shade800,
-      //   items: const [
-      //     BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Trang chủ'),
-      //     BottomNavigationBarItem(icon: Icon(Icons.map), label: 'Bản đồ'),
-      //     BottomNavigationBarItem(icon: Icon(Icons.star), label: 'Tạo trọ mới'),
-      //     BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Tài khoản'),
-      //   ],
-      // ),
+
     );
   }
 }

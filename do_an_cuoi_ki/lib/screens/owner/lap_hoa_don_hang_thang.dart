@@ -1,6 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:do_an_cuoi_ki/models/bill/bill.dart';
 import 'package:do_an_cuoi_ki/models/user.dart';
+import 'package:do_an_cuoi_ki/services/bill_service.dart';
+import 'package:do_an_cuoi_ki/services/room_service.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -19,6 +21,8 @@ class _BillManagementScreenState extends State<BillManagementScreen>
   late TabController _tabController;
   late UserModel currentUser;
   late String buildingId;
+  BillService  billService= BillService();
+  RoomService roomService =RoomService();
   
   @override
   void initState() {
@@ -79,7 +83,7 @@ class _BillManagementScreenState extends State<BillManagementScreen>
   final currentMonthYear = '${now.month.toString().padLeft(2, '0')}/${now.year}';
 
   return StreamBuilder<QuerySnapshot>(
-    stream: FirebaseFirestore.instance.collection('rooms').where('buildingId', isEqualTo: buildingId).where('status',isEqualTo: 'rented').snapshots(),
+    stream: roomService.getRentedRoomsByBuilding(buildingId),
     builder: (context, roomsSnapshot) {
       if (roomsSnapshot.connectionState == ConnectionState.waiting) {
         return const Center(child: CircularProgressIndicator());
@@ -89,26 +93,20 @@ class _BillManagementScreenState extends State<BillManagementScreen>
         return const Center(child: Text('Không có phòng nào'));
       }
 
-      // Lấy danh sách tất cả các phòng
       final allRooms = roomsSnapshot.data!.docs;
 
       return FutureBuilder<QuerySnapshot>(
-        future: FirebaseFirestore.instance
-            .collection('bills')
-            .where('thangNam', isEqualTo: currentMonthYear)
-            .get(),
+        future: billService.getBillsForCurrentMonth(),
         builder: (context, billsSnapshot) {
           if (billsSnapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          // Lấy danh sách các phòng đã có hóa đơn trong tháng này
           final billedRoomIds = billsSnapshot.data?.docs
                   .map((bill) => bill['roomId'] as String)
                   .toSet() ??
               <String>{};
 
-          // Lọc ra các phòng chưa có hóa đơn
           final unbilledRooms = allRooms
               .where((room) => !billedRoomIds.contains(room.id))
               .toList();
@@ -116,6 +114,7 @@ class _BillManagementScreenState extends State<BillManagementScreen>
           if (unbilledRooms.isEmpty) {
             return const Center(child: Text('Tất cả phòng đã có hóa đơn tháng này'));
           }
+
 
           return ListView.builder(
             itemCount: unbilledRooms.length,
@@ -169,10 +168,7 @@ class _BillManagementScreenState extends State<BillManagementScreen>
 
   Widget _buildPendingBillsTab(String? selectedBuildingId) {
   return StreamBuilder<QuerySnapshot>(
-    stream: FirebaseFirestore.instance
-        .collection('bills')
-        .where('status', isEqualTo: 'pending') // Lọc các hóa đơn chờ thanh toán
-        .snapshots(),
+     stream: billService.getPendingBills(),
     builder: (context, snapshot) {
       if (snapshot.connectionState == ConnectionState.waiting) {
         return const Center(child: CircularProgressIndicator());
@@ -182,21 +178,26 @@ class _BillManagementScreenState extends State<BillManagementScreen>
         return const Center(child: Text('Không có hóa đơn chờ thanh toán'));
       }
 
-      // Lọc bills ngay trong builder thay vì trong stream
       return FutureBuilder<List<DocumentSnapshot>>(
-        future: _filterBillsByBuilding(snapshot.data!.docs, selectedBuildingId),
+        future: billService.filterBillsByBuilding(
+          snapshot.data!.docs, 
+          selectedBuildingId
+        ),
         builder: (context, filteredSnapshot) {
           if (filteredSnapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          final pendingBills = filteredSnapshot.data!.map((doc) {
-            return BillModel.fromJson(doc.data() as Map<String, dynamic>);
-          }).toList();
+          final pendingBills = filteredSnapshot.data!
+              .map(billService.billFromSnapshot)
+              .toList();
 
           if (pendingBills.isEmpty) {
-            return const Center(child: Text('Không có hóa đơn chờ thanh toán cho tòa nhà này'));
+            return const Center(
+              child: Text('Không có hóa đơn chờ thanh toán cho tòa nhà này'),
+            );
           }
+
 
           return ListView.builder(
             itemCount: pendingBills.length,
@@ -206,7 +207,7 @@ class _BillManagementScreenState extends State<BillManagementScreen>
                 margin: const EdgeInsets.all(8.0),
                 child: ExpansionTile(
                   title: FutureBuilder<String?>(
-                    future: getRoomTitleById(bill.roomId),
+                    future:roomService.getRoomTitleById(bill.roomId),
                     builder: (context, roomSnapshot) {
                       if (roomSnapshot.connectionState == ConnectionState.waiting) {
                         return const Text('Đang tải tên phòng...');
@@ -262,13 +263,8 @@ class _BillManagementScreenState extends State<BillManagementScreen>
 // Hàm cập nhật trạng thái hóa đơn
 void _updateBillStatus(String billId, PaymentStatus status) async {
   try {
-    await FirebaseFirestore.instance
-        .collection('bills')
-        .doc(billId)
-        .update({
-          'status': status.toJson(),
-          'updatedAt': FieldValue.serverTimestamp(),
-        });
+   await billService.updateBillStatus2(billId: billId, status: PaymentStatus.paid);
+
     
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('Đã cập nhật trạng thái thành ${_getStatusText(status)}')),
@@ -293,10 +289,7 @@ String _getStatusText(PaymentStatus status) {
 
  Widget _buildPaidBillsTab(String? selectedBuildingId) {
   return StreamBuilder<QuerySnapshot>(
-    stream: FirebaseFirestore.instance
-        .collection('bills')
-        .where('status', isEqualTo: 'paid')
-        .snapshots(),
+    stream: billService.getPaidBillsStream(),
     builder: (context, snapshot) {
       if (snapshot.connectionState == ConnectionState.waiting) {
         return const Center(child: CircularProgressIndicator());
@@ -308,7 +301,7 @@ String _getStatusText(PaymentStatus status) {
 
       // Lọc bills ngay trong builder thay vì trong stream
       return FutureBuilder<List<DocumentSnapshot>>(
-        future: _filterBillsByBuilding(snapshot.data!.docs, selectedBuildingId),
+        future: roomService.filterBillsByBuilding(snapshot.data!.docs, selectedBuildingId),
         builder: (context, filteredSnapshot) {
           if (filteredSnapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
@@ -330,7 +323,7 @@ String _getStatusText(PaymentStatus status) {
                 margin: const EdgeInsets.all(8.0),
                 child: ExpansionTile(
                   title: FutureBuilder<String?>(
-                    future: getRoomTitleById(bill.roomId),
+                    future:roomService.getRoomTitleById(bill.roomId),
                     builder: (context, roomSnapshot) {
                       if (roomSnapshot.connectionState == ConnectionState.waiting) {
                         return const Text('Đang tải tên phòng...');
@@ -551,39 +544,22 @@ void _createBillForRoom(String roomId,String owneridForbill, String tenantidForb
               ElevatedButton(
                 onPressed: () {
                   // Tạo và lưu hóa đơn
-                  final newBill = BillModel(
-                    id: DateTime.now().millisecondsSinceEpoch.toString(),
-                    roomId: roomId,
-                    ownerId: owneridForbill, // Thay bằng ownerId thực tế
-                    khachThueId: tenantidForbill, // Thay bằng tenantId thực tế
-                    sodienCu: sodienCu,
-                    sodienMoi: sodienMoi,
-                    soNguoi: soNguoi,
-                    priceRoom: priceRoom,
-                    priceDien: priceDien,
-                    priceWater: priceWater,
-                    amenitiesPrice: amenitiesPrice,
-                    date: now,
-                    thangNam: currentMonthYear,
-                    sumPrice: calculateTotal(),
-                    status: PaymentStatus.pending,
-                  );
-                  final batch = FirebaseFirestore.instance.batch();
-                  final roomRef = FirebaseFirestore.instance.collection('rooms').doc(roomId);
-                  batch.update(roomRef, {
-                    'sodien': sodienMoi, // Cập nhật số điện mới
-                    'updatedAt': FieldValue.serverTimestamp(), // Thêm thời gian cập nhật
-                  });
-                  FirebaseFirestore.instance
-                      .collection('bills')
-                      .doc(newBill.id)
-                      .set(newBill.toJson())
-                      .then((_) {
+                  try{
+                    billService.createBill(roomId: roomId, ownerId: owneridForbill, tenantId: tenantidForbill, oldElectricity: sodienCu, newElectricity: sodienMoi, numberOfPeople: soNguoi, roomPrice: priceRoom, electricityPrice: priceDien, waterPrice: priceWater, amenitiesPrice: amenitiesPrice, date: now, monthYear: currentMonthYear, totalPrice: calculateTotal());
                     Navigator.pop(context);
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text('Đã tạo hóa đơn thành công!')),
                     );
-                  });
+                  }
+                  catch(e)
+                  {
+                     Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Đã tạo hóa đơn Thất Bại!')),
+                    );
+                  }
+                  
+                 
                 },
                 child: const Text('Lưu'),
               ),
@@ -634,43 +610,5 @@ void _createBillForRoom(String roomId,String owneridForbill, String tenantidForb
   }
 
 }
-Future<String?> getRoomTitleById(String roomId) async {
-  try {
-    final DocumentSnapshot roomSnapshot = await FirebaseFirestore.instance
-        .collection('rooms')
-        .doc(roomId)
-        .get();
-
-    if (roomSnapshot.exists) {
-      final data = roomSnapshot.data() as Map<String, dynamic>;
-      return data['title'] as String?; // Trả về trực tiếp giá trị title
-    }
-    return null; // Trả về null nếu phòng không tồn tại
-  } catch (e) {
-    print('Error fetching room title: $e');
-    return null; // Trả về null nếu có lỗi
-  }
-}
 
 
-
-Future<List<DocumentSnapshot>> _filterBillsByBuilding(
-    List<DocumentSnapshot> bills, String? buildingId) async {
-  if (buildingId == null) return bills;
-
-  // Lấy tất cả phòng thuộc building
-  final roomsQuery = await FirebaseFirestore.instance
-      .collection('rooms')
-      .where('buildingId', isEqualTo: buildingId)
-      .get();
-
-  if (roomsQuery.docs.isEmpty) return [];
-
-  final roomIds = roomsQuery.docs.map((doc) => doc.id).toList();
-  
-  // Lọc bills chỉ giữ lại những bill có roomId thuộc building
-  return bills.where((doc) {
-    final data = doc.data() as Map<String, dynamic>;
-    return roomIds.contains(data['roomId']);
-  }).toList();
-}
