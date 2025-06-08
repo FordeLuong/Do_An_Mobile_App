@@ -80,13 +80,6 @@ class _LoginPageState extends State<LoginPage> {
     if (!mounted) return;
 
     if (user.role == UserRole.customer) {
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(
-          builder: (context) => HomeScreenWithBottomNav(currentUser: user),
-        ),
-        (route) => false,
-      );
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Đăng nhập Customer thành công! (Màn hình Customer đang chờ...)'))
       );
