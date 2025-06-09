@@ -87,7 +87,7 @@ class RoomListScreen extends StatelessWidget {
                                       stream: FirebaseFirestore.instance
                                           .collection('requests')
                                           // ĐÃ SẮP XẾP LẠI THỨ TỰ WHERE ĐỂ KHỚP VỚI INDEX (loai_request, room_id, status, thoi_gian)
-                                          .where('loai_request', isEqualTo: 'sua_chua')
+                                          .where('loai_request', whereIn: ['sua_chua', 'tra_phong', 'thue_phong'])
                                           .where('room_id', isEqualTo: rooms[index].id)
                                           .where('status', isEqualTo: 'pending')
                                           .orderBy('thoi_gian', descending: true)
