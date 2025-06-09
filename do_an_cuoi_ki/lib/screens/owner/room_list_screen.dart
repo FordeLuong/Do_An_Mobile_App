@@ -4,6 +4,8 @@ import 'package:do_an_cuoi_ki/screens/owner/Contract/lap_hop_dong.dart';
 import 'package:do_an_cuoi_ki/screens/owner/sua_chua.dart';
 import 'package:do_an_cuoi_ki/screens/owner/quanlysuachua_screen.dart';
 import 'package:do_an_cuoi_ki/screens/owner/Contract/thanh_ly_hop_dong.dart';
+import 'package:do_an_cuoi_ki/services/request_service.dart';
+import 'package:do_an_cuoi_ki/services/room_service.dart';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:intl/intl.dart';
@@ -12,8 +14,11 @@ class RoomListScreen extends StatelessWidget {
   final String buildingId;
   final ownerID;
   final UserModel currentUser;
-  const RoomListScreen({super.key, required this.buildingId, required this.ownerID, required this.currentUser});
 
+  RoomListScreen({super.key, required this.buildingId, required this.ownerID, required this.currentUser});
+  final RoomService _roomService = RoomService();
+  final RequestService _requestService = RequestService();
+  
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -22,10 +27,7 @@ class RoomListScreen extends StatelessWidget {
         backgroundColor: Colors.green.shade800,
       ),
       body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance
-            .collection('rooms')
-            .where('buildingId', isEqualTo: buildingId)
-            .snapshots(),
+        stream: _roomService.getRoomsByBuildingId(buildingId),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
@@ -104,7 +106,6 @@ class RoomListScreen extends StatelessWidget {
                                           print("Lỗi StreamBuilder Request Count: ${snapshot.error}");
                                           return const Icon(Icons.error, color: Colors.red);
                                         }
-
                                         int requestCount = snapshot.data?.docs.length ?? 0;
 
                                         return GestureDetector(
@@ -220,10 +221,8 @@ class RoomListScreen extends StatelessWidget {
                                   icon: const Icon(Icons.delete, color: Colors.red),
                                   onPressed: () {
                                     // Xử lý xóa phòng
-                                    FirebaseFirestore.instance
-                                        .collection('rooms')
-                                        .doc(rooms[index].id)
-                                        .delete();
+                                    
+                                    _roomService.deleteRoom(rooms[index].id);
                                   },
                                 ),
 
@@ -313,6 +312,7 @@ class _RequestDialogState extends State<RequestDialog> {
 
   @override
   Widget build(BuildContext context) {
+
     return AlertDialog(
       title: const Text('Danh sách yêu cầu chờ xử lý'),
       content: ValueListenableBuilder<List<QueryDocumentSnapshot>>(

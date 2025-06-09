@@ -3,6 +3,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 // SỬA IMPORT: Đảm bảo import đúng RequestModel và các hàm liên quan
 import 'package:do_an_cuoi_ki/models/request.dart'; // Đổi từ request.dart thành request_model.dart
+import 'package:do_an_cuoi_ki/services/request_service.dart';
+import 'package:do_an_cuoi_ki/services/room_service.dart';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:do_an_cuoi_ki/screens/user/room_detail_screen.dart';
@@ -44,7 +46,8 @@ class RoomListScreen_User extends StatefulWidget { // Chuyển thành StatefulWi
 class _RoomListScreen_UserState extends State<RoomListScreen_User> {
   bool _isCurrentlyRenting = false;
   bool _isLoadingRentingStatus = true;
-
+  RoomService _roomService= RoomService();
+  RequestService _requestService= RequestService();
   @override
   void initState() {
     super.initState();
@@ -56,7 +59,7 @@ class _RoomListScreen_UserState extends State<RoomListScreen_User> {
     setState(() {
       _isLoadingRentingStatus = true;
     });
-    bool renting = await checkIfUserIsCurrentlyRenting(widget.userId);
+    bool renting = await _roomService.checkIfUserIsCurrentlyRenting(widget.userId);
     if (mounted) {
       setState(() {
         _isCurrentlyRenting = renting;
@@ -183,10 +186,7 @@ class _RoomListScreen_UserState extends State<RoomListScreen_User> {
                       );
 
                       try {
-                        await FirebaseFirestore.instance
-                            .collection('requests')
-                            .doc(request.id)
-                            .set(request.toJson());
+                        await _requestService.createRequest(request);
 
                         Navigator.pop(dialogContext);
                         ScaffoldMessenger.of(context).showSnackBar(
@@ -227,6 +227,7 @@ class _RoomListScreen_UserState extends State<RoomListScreen_User> {
             .where('buildingId', isEqualTo: widget.buildingId)
             .where('status', isEqualTo: RoomStatus.available.toJson())
             .snapshots(),
+            
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting && !_isLoadingRentingStatus) { // Chỉ hiện loading của stream nếu không phải loading ban đầu
             return const Center(child: CircularProgressIndicator());

@@ -1,4 +1,8 @@
 import 'package:do_an_cuoi_ki/models/bill/bill.dart';
+// File: screens/user/my_room_screen.dart
+import 'package:do_an_cuoi_ki/services/contract_service.dart';
+import 'package:do_an_cuoi_ki/services/request_service.dart';
+import 'package:do_an_cuoi_ki/services/room_service.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:do_an_cuoi_ki/models/user.dart';
@@ -41,6 +45,8 @@ class _MyRoomScreenState extends State<MyRoomScreen> {
   final DateFormat _dateFormat = DateFormat('dd/MM/yyyy');
   final RequestService _requestService = RequestService();
   final BillService _billService = BillService();
+  final ContractService _contractService = ContractService();
+  final RoomService _roomService = RoomService();
 
   @override
   void initState() {
@@ -54,7 +60,6 @@ class _MyRoomScreenState extends State<MyRoomScreen> {
       });
     }
   }
-
   @override
   void didUpdateWidget(covariant MyRoomScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -173,6 +178,7 @@ class _MyRoomScreenState extends State<MyRoomScreen> {
         } else {
           _loadingMessage = "Hợp đồng không chứa thông tin phòng.";
           _rentedRoom = null;
+
         }
       } else {
         _loadingMessage = "Bạn chưa thuê phòng nào.";

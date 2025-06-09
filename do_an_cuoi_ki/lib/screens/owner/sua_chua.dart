@@ -1,6 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:do_an_cuoi_ki/models/DVSC.dart';
 import 'package:do_an_cuoi_ki/models/phieu_sua_chua.dart';
+import 'package:do_an_cuoi_ki/services/donvisuachua_service.dart';
+import 'package:do_an_cuoi_ki/services/phieusuachua_service.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -30,6 +32,10 @@ class _SuaChuaState extends State<SuaChua> {
   DateTime _ngaySua = DateTime.now();
   bool _isLoading = true;
   RepairStatus _status = RepairStatus.pending;
+
+  // Initialize services
+  final DonViSuaChuaService _donViSuaChuaService = DonViSuaChuaService();
+  final PhieuSuaChuaService _phieuSuaChuaService = PhieuSuaChuaService();
 
   @override
   void initState() {

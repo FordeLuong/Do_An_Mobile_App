@@ -93,4 +93,26 @@ class ContractService {
       rethrow;
     }
   }
+   Future<ContractModel?> getActiveContractForTenant(String tenantId) async {
+    try {
+      final contractsSnapshot = await _firestore
+          .collection('contracts')
+          .where('tenantId', isEqualTo: tenantId)
+          .where('status', isEqualTo: ContractStatus.active.toJson())
+          .limit(1)
+          .get();
+
+      if (contractsSnapshot.docs.isNotEmpty) {
+        final contractData = contractsSnapshot.docs.first.data();
+        if (!contractData.containsKey('id')) {
+          contractData['id'] = contractsSnapshot.docs.first.id;
+        }
+        return ContractModel.fromJson(contractData);
+      }
+      return null;
+    } catch (e) {
+      print("Error getting active contract: $e");
+      return null;
+    }
+  }
 }

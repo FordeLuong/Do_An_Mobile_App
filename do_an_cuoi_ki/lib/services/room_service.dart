@@ -218,4 +218,87 @@ class RoomService {
       rethrow;
     }
   }
+
+
+
+    Stream<QuerySnapshot> getRoomsByBuildingId(String buildingId) {
+    return _firestore
+        .collection('rooms')
+        .where('buildingId', isEqualTo: buildingId)
+        .snapshots();
+  }
+
+  /// Xóa phòng
+  Future<void> deleteRoom(String roomId) async {
+    await _firestore
+        .collection('rooms')
+        .doc(roomId)
+        .delete();
+  }
+
+  Future<RoomModel?> getRoomById1(String roomId) async {
+    try {
+      final roomSnapshot = await _firestore
+          .collection('rooms')
+          .doc(roomId)
+          .get();
+
+      if (roomSnapshot.exists && roomSnapshot.data() != null) {
+        Map<String, dynamic> roomDataWithId = Map.from(roomSnapshot.data()!);
+        roomDataWithId['id'] = roomSnapshot.id;
+        return RoomModel.fromJson(roomDataWithId);
+      }
+      return null;
+    } catch (e) {
+      print("Error getting room: $e");
+      return null;
+    }
+  }
+
+   Future<RoomModel?> getRoomById2(String roomId) async {
+    try {
+      final roomSnapshot = await _firestore
+          .collection('rooms')
+          .doc(roomId)
+          .get();
+
+      if (roomSnapshot.exists) {
+        return RoomModel.fromJson({
+          'id': roomSnapshot.id,
+          ...roomSnapshot.data() as Map<String, dynamic>,
+        });
+      }
+      return null;
+    } catch (e) {
+      print("Error getting room: $e");
+      return null;
+    }
+  }
+
+  Stream<QuerySnapshot> getAvailableRoomsByBuildingId(String buildingId) {
+    return _firestore
+        .collection('rooms')
+        .where('buildingId', isEqualTo: buildingId)
+        .where('status', isEqualTo: RoomStatus.available.toJson())
+        .snapshots();
+  }
+
+  Future<bool> checkIfUserIsCurrentlyRenting(String userId) async {
+    if (userId.isEmpty) {
+      print("checkIfUserIsCurrentlyRenting: userId is empty, returning false.");
+      return false;
+    }
+    try {
+      final querySnapshot = await FirebaseFirestore.instance
+          .collection('rooms') // Tên collection chứa thông tin phòng
+          .where('currentTenantId', isEqualTo: userId)
+          .where('status', isEqualTo: RoomStatus.rented.toJson()) // Sử dụng RoomStatus từ model phòng
+          .limit(1) // Chỉ cần tìm một phòng là đủ
+          .get();
+      return querySnapshot.docs.isNotEmpty;
+    } catch (e) {
+      print("Lỗi khi kiểm tra trạng thái thuê phòng của người dùng $userId: $e");
+      return false; // Mặc định là chưa thuê nếu có lỗi xảy ra
+    }
+  }
 }

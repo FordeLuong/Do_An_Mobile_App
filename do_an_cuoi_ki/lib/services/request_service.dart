@@ -42,7 +42,7 @@ class RequestService {
     
     return loadedRequests;
   }
-  Future<List<RequestModel>> getRequestsByTenantAndRoom(
+Future<List<RequestModel>> getRequestsByTenantAndRoom(
       String userKhachId, String roomId) async {
     try {
       final snapshot = await _firestore
@@ -69,4 +69,81 @@ class RequestService {
       throw Exception('Lỗi khi cập nhật trạng thái yêu cầu: $e');
     }
   }
+
+  Stream<QuerySnapshot> getRequestsByRoomId(String roomId) {
+    return _firestore
+        .collection('requests')
+        .where('room_id', isEqualTo: roomId)
+        .snapshots();
+  }
+
+  /// Xóa yêu cầu
+  Future<void> deleteRequest(String requestId) async {
+    await _firestore
+        .collection('requests')
+        .doc(requestId)
+        .delete();
+  }
+
+  /// Đánh dấu yêu cầu đã xử lý
+  Future<void> markRequestAsProcessed(String requestId) async {
+    await _firestore
+        .collection('requests')
+        .doc(requestId)
+        .update({'status': 'processed'});
+  }
+
+  Future<void> createRequest(RequestModel request) async {
+    try {
+      await _firestore
+          .collection('requests')
+          .doc(request.id)
+          .set(request.toJson());
+    } catch (e) {
+      print("Error creating request: $e");
+      rethrow;
+    }
+  }
+
+  Future<bool> checkIfUserIsCurrentlyRenting(String userId) async {
+    try {
+      final querySnapshot = await _firestore
+          .collection('contracts')
+          .where('tenantId', isEqualTo: userId)
+          .where('status', whereIn: ['active', 'pending'])
+          .limit(1)
+          .get();
+
+      return querySnapshot.docs.isNotEmpty;
+    } catch (e) {
+      print("Error checking user rental status: $e");
+      return false;
+    }
+  }
+
+  Future<void> createRequest1(RequestModel request) async {
+    try {
+      await _firestore
+          .collection('requests')
+          .doc(request.id)
+          .set(request.toJson());
+    } catch (e) {
+      print("Error creating request: $e");
+      rethrow;
+    }
+  }
+
+  // Tạo một yêu cầu mới
+  Future<void> createRequest2(RequestModel request) async {
+    try {
+      await _firestore
+          .collection('requests')
+          .doc(request.id)
+          .set(request.toJson());
+    } catch (e) {
+      print("Error creating request: $e");
+      rethrow;
+    }
+  }
+
 }
