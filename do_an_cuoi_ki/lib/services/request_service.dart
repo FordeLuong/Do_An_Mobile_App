@@ -47,6 +47,13 @@ class RequestService {
     try {
       final snapshot = await _firestore
           .collection('requests')
+          .where('userKhachId', isEqualTo: userKhachId)
+          .where('roomId', isEqualTo: roomId)
+          .get();
+      return snapshot.docs.map((doc) => RequestModel.fromJson({
+            ...doc.data(),
+            'id': doc.id,
+          })).toList();
     } catch (e) {
       throw Exception('Lỗi khi tải yêu cầu: $e');
     }
