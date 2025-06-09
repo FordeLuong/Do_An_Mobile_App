@@ -2,6 +2,7 @@
 // lib/screens/owner/owner_contract_list_screen.dart
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:do_an_cuoi_ki/screens/owner/chitiet_compensation.dart';
 import 'package:flutter/material.dart';
 import 'package:do_an_cuoi_ki/models/contract/contract.dart';
 import 'package:do_an_cuoi_ki/models/contract/contract_status.dart';
@@ -67,11 +68,25 @@ class _OwnerContractListScreenState extends State<OwnerContractListScreen> {
           ),
           actions: <Widget>[
             TextButton(
+              child: const Text('Phiếu đền bù'),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => CompensationListScreen(
+                      contractId:contract.id,
+                    ),
+                  ),
+                );
+              },
+            ),
+            TextButton(
               child: const Text('Đóng'),
               onPressed: () {
                 Navigator.of(dialogContext).pop();
               },
             ),
+            
           ],
         );
       },

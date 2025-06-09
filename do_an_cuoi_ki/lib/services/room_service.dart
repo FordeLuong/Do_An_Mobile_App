@@ -291,7 +291,7 @@ class RoomService {
     try {
       final querySnapshot = await FirebaseFirestore.instance
           .collection('rooms') // Tên collection chứa thông tin phòng
-          .where('currentTenantId', isEqualTo: userId)
+          .where('ownerId', isEqualTo: userId)
           .where('status', isEqualTo: RoomStatus.rented.toJson()) // Sử dụng RoomStatus từ model phòng
           .limit(1) // Chỉ cần tìm một phòng là đủ
           .get();

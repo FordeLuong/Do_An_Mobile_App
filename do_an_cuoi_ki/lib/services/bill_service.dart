@@ -110,6 +110,7 @@ class BillService {
     required String monthYear,
     required double totalPrice,
   }) async {
+<<<<<<< Updated upstream
   try {
     // Tính phí sửa chữa
     double repairCost = 0.0;
@@ -155,6 +156,40 @@ class BillService {
   } catch (e) {
     // Handle the error, e.g., print or log it
     print('Error creating bill: $e');
+=======
+ 
+      final newBill = BillModel(
+                    id: DateTime.now().millisecondsSinceEpoch.toString(),
+                    roomId: roomId,
+                    ownerId: ownerId, // Thay bằng ownerId thực tế
+                    khachThueId: tenantId, // Thay bằng tenantId thực tế
+                    sodienCu: oldElectricity,
+                    sodienMoi: newElectricity,
+                    soNguoi: numberOfPeople,
+                    priceRoom: roomPrice,
+                    priceDien: electricityPrice,
+                    priceWater: waterPrice,
+                    amenitiesPrice: amenitiesPrice,
+                    date: date,
+                    thangNam: monthYear,
+                    sumPrice: totalPrice,
+                    status: PaymentStatus.pending,
+                  );
+                  final batch = FirebaseFirestore.instance.batch();
+                  final roomRef = FirebaseFirestore.instance.collection('rooms').doc(roomId);
+                  batch.update(roomRef, {
+                    'sodien': newElectricity, // Cập nhật số điện mới
+                    'updatedAt': FieldValue.serverTimestamp(), // Thêm thời gian cập nhật
+                  });
+                  batch.commit();
+                  FirebaseFirestore.instance
+                      .collection('bills')
+                      .doc(newBill.id)
+                      .set(newBill.toJson()
+                     
+                  );
+   
+>>>>>>> Stashed changes
   }
 }
 }

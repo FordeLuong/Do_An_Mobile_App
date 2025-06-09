@@ -222,12 +222,7 @@ class _RoomListScreen_UserState extends State<RoomListScreen_User> {
       body: _isLoadingRentingStatus
           ? const Center(child: CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(Colors.green)))
           : StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance
-            .collection('rooms')
-            .where('buildingId', isEqualTo: widget.buildingId)
-            .where('status', isEqualTo: RoomStatus.available.toJson())
-            .snapshots(),
-            
+        stream: _roomService.getAvailableRoomsByBuildingId(widget.buildingId),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting && !_isLoadingRentingStatus) { // Chỉ hiện loading của stream nếu không phải loading ban đầu
             return const Center(child: CircularProgressIndicator());

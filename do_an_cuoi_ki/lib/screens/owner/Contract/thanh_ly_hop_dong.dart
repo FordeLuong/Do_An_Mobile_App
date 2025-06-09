@@ -328,7 +328,7 @@ class _ThanhLyHopDongState extends State<ThanhLyHopDong>
                     );
 
                     // Lưu dữ liệu lên Firestore
-                    await _compensationService.saveCompensationData(compensationData,tmp!.id,violationTerms);
+                    //await _compensationService.saveCompensationData(compensationData,tmp!.id,violationTerms);
 
                     // Đóng loading và chuyển bước
                     Navigator.of(context).pop();
@@ -505,8 +505,9 @@ class _ThanhLyHopDongState extends State<ThanhLyHopDong>
                       
                       _roomService.updateRoomStatus(contract.roomId,'available');
                       // Cập nhật trạng thái hợp đồng
-                      
+                      ContractModel? tmp = await _contractService.findActiveContractByRoomId(roomId);
                       _contractService.updateContractStatus1(contract.id,ContractStatus.expired);
+                      await _compensationService.saveCompensationData(compensationData,tmp!.id,violationTerms);
 
                       // Cập nhật danh sách điều khoản vi phạm vào bản ghi bồi thường
                       // if (violationTerms.isNotEmpty) {
