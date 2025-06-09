@@ -110,86 +110,52 @@ class BillService {
     required String monthYear,
     required double totalPrice,
   }) async {
-<<<<<<< Updated upstream
-  try {
-    // Tính phí sửa chữa
-    double repairCost = 0.0;
-    final phieuSnapshot = await _firestore
-        .collection('phieu_sua')
-        .where('roomId', isEqualTo: roomId)
-        .where('status', isEqualTo: RepairStatus.completed.name)
-        .where('faultSource', isEqualTo: FaultSource.tenant.name)
-        .get();
+    try {
+      // Tính phí sửa chữa
+      double repairCost = 0.0;
+      final phieuSnapshot = await _firestore
+          .collection('phieu_sua')
+          .where('roomId', isEqualTo: roomId)
+          .where('status', isEqualTo: RepairStatus.completed.name)
+          .where('faultSource', isEqualTo: FaultSource.tenant.name)
+          .get();
 
-    for (var doc in phieuSnapshot.docs) {
-      final phieu = PhieuSuaChua.fromFirestore(doc, null);
-      repairCost += phieu.tongTien;
-    }
-    // Kiểm tra xem hóa đơn đã tồn tại hay chưa
-    final newBill = BillModel(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      roomId: roomId,
-      ownerId: ownerId, // Thay bằng ownerId thực tế
-      khachThueId: tenantId, // Thay bằng tenantId thực tế
-      sodienCu: oldElectricity,
-      sodienMoi: newElectricity,
-      soNguoi: numberOfPeople,
-      priceRoom: roomPrice,
-      priceDien: electricityPrice,
-      priceWater: waterPrice,
-      amenitiesPrice: amenitiesPrice,
-      date: date,
-      thangNam: monthYear,
-      sumPrice: totalPrice,
-      status: PaymentStatus.pending,
-    );
-    final batch = FirebaseFirestore.instance.batch();
-    final roomRef = FirebaseFirestore.instance.collection('rooms').doc(roomId);
-    batch.update(roomRef, {
-      'sodien': newElectricity, // Cập nhật số điện mới
-      'updatedAt': FieldValue.serverTimestamp(), // Thêm thời gian cập nhật
-    });
-    FirebaseFirestore.instance
-        .collection('bills')
-        .doc(newBill.id)
-        .set(newBill.toJson());
-  } catch (e) {
-    // Handle the error, e.g., print or log it
-    print('Error creating bill: $e');
-=======
- 
+      for (var doc in phieuSnapshot.docs) {
+        final phieu = PhieuSuaChua.fromFirestore(doc, null);
+        repairCost += phieu.tongTien;
+      }
+      // Tạo hóa đơn mới
       final newBill = BillModel(
-                    id: DateTime.now().millisecondsSinceEpoch.toString(),
-                    roomId: roomId,
-                    ownerId: ownerId, // Thay bằng ownerId thực tế
-                    khachThueId: tenantId, // Thay bằng tenantId thực tế
-                    sodienCu: oldElectricity,
-                    sodienMoi: newElectricity,
-                    soNguoi: numberOfPeople,
-                    priceRoom: roomPrice,
-                    priceDien: electricityPrice,
-                    priceWater: waterPrice,
-                    amenitiesPrice: amenitiesPrice,
-                    date: date,
-                    thangNam: monthYear,
-                    sumPrice: totalPrice,
-                    status: PaymentStatus.pending,
-                  );
-                  final batch = FirebaseFirestore.instance.batch();
-                  final roomRef = FirebaseFirestore.instance.collection('rooms').doc(roomId);
-                  batch.update(roomRef, {
-                    'sodien': newElectricity, // Cập nhật số điện mới
-                    'updatedAt': FieldValue.serverTimestamp(), // Thêm thời gian cập nhật
-                  });
-                  batch.commit();
-                  FirebaseFirestore.instance
-                      .collection('bills')
-                      .doc(newBill.id)
-                      .set(newBill.toJson()
-                     
-                  );
-   
->>>>>>> Stashed changes
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        roomId: roomId,
+        ownerId: ownerId, // Thay bằng ownerId thực tế
+        khachThueId: tenantId, // Thay bằng tenantId thực tế
+        sodienCu: oldElectricity,
+        sodienMoi: newElectricity,
+        soNguoi: numberOfPeople,
+        priceRoom: roomPrice,
+        priceDien: electricityPrice,
+        priceWater: waterPrice,
+        amenitiesPrice: amenitiesPrice,
+        date: date,
+        thangNam: monthYear,
+        sumPrice: totalPrice,
+        status: PaymentStatus.pending,
+      );
+      final batch = FirebaseFirestore.instance.batch();
+      final roomRef = FirebaseFirestore.instance.collection('rooms').doc(roomId);
+      batch.update(roomRef, {
+        'sodien': newElectricity, // Cập nhật số điện mới
+        'updatedAt': FieldValue.serverTimestamp(), // Thêm thời gian cập nhật
+      });
+      await batch.commit();
+      await FirebaseFirestore.instance
+          .collection('bills')
+          .doc(newBill.id)
+          .set(newBill.toJson());
+    } catch (e) {
+      // Handle the error, e.g., print or log it
+      print('Error creating bill: $e');
+    }
   }
-}
 }
