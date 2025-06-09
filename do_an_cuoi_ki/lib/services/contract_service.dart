@@ -2,100 +2,95 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:do_an_cuoi_ki/models/contract/contract.dart';
 import 'package:do_an_cuoi_ki/models/contract/contract_status.dart';
 import 'package:do_an_cuoi_ki/models/room.dart';
-import 'package:do_an_cuoi_ki/screens/owner/Contract/lap_hop_dong.dart';
-import 'package:flutter/material.dart';
 
 class ContractService {
-  final FirebaseFirestore _firestore;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  ContractService({FirebaseFirestore? firestore})
-      : _firestore = firestore ?? FirebaseFirestore.instance;
+  Future<void> createContract(ContractModel contract) async {
+    await _firestore.collection('contracts').doc(contract.id).set(contract.toJson());
+  }
 
-  Future<void> createContract({
-    required BuildContext context,
-    required String roomId,
-    required String ownerId,
-    required String tenantId,
-    required DateTime startDate,
-    required ContractDuration duration,
-    required double rentAmount,
-    required double depositAmount,
-    required String terms,
-    required DepositOption depositOption,
+  Future<void> updateRoomStatusAfterContract(
+    String roomId, 
+    String tenantId, 
+    RoomStatus newStatus,
+  ) async {
+    final batch = _firestore.batch();
+    final roomRef = _firestore.collection('rooms').doc(roomId);
+    
+    batch.update(roomRef, {
+      'status': newStatus.toJson(),
+      'ownerId': tenantId,
+      'updatedAt': DateTime.now().toIso8601String(),
+    });
+    
+    await batch.commit();
+  }
+
+
+    Stream<QuerySnapshot> getContractsByOwner(String ownerId) {
+    return _firestore
+        .collection('contracts')
+        .where('ownerId', isEqualTo: ownerId)
+        .orderBy('createdAt', descending: true)
+        .snapshots();
+  }
+
+  // Cập nhật trạng thái hợp đồng
+  Future<void> updateContractStatus({
+    required String contractId,
+    required ContractStatus newStatus,
   }) async {
+    await _firestore.collection('contracts').doc(contractId).update({
+      'status': newStatus.toJson(),
+      'updatedAt': Timestamp.now(),
+    });
+  }
+
+  // Chuyển đổi DocumentSnapshot thành ContractModel
+  ContractModel parseContractDocument(DocumentSnapshot contractDoc) {
+    Map<String, dynamic> data = contractDoc.data() as Map<String, dynamic>;
+    if (!data.containsKey('id') || (data['id'] as String? ?? '').isEmpty) {
+      data['id'] = contractDoc.id;
+    }
+    return ContractModel.fromJson(data);
+  }
+
+
+   Future<ContractModel?> findActiveContractByRoomId(String roomId) async {
     try {
-      final endDate = _calculateEndDate(startDate, duration);
-      final newContractRef = _firestore.collection('contracts').doc();
-      final contractId = newContractRef.id;
+      final querySnapshot = await _firestore
+          .collection('contracts') // tên collection bạn dùng trong Firestore
+          .where('roomId', isEqualTo: roomId)
+          .where('status', isEqualTo: ContractStatus.active.toJson())
+          .limit(1) // chỉ lấy 1 bản ghi đầu tiên nếu có
+          .get();
 
-      final contractStatus = depositOption == DepositOption.payNow
-          ? ContractStatus.active
-          : ContractStatus.pending;
-
-      final newContract = ContractModel(
-        id: contractId,
-        roomId: roomId,
-        tenantId: tenantId,
-        ownerId: ownerId,
-        startDate: startDate,
-        endDate: endDate,
-        rentAmount: rentAmount,
-        depositAmount: depositAmount,
-        termsAndConditions: terms,
-        status: contractStatus,
-        paymentHistoryIds: [],
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-      );
-
-      await newContractRef.set(newContract.toJson());
-
-      final batch = _firestore.batch();
-      final roomRef = _firestore.collection('rooms').doc(roomId);
-
-      final roomNewStatus = contractStatus == ContractStatus.active
-          ? RoomStatus.rented
-          : RoomStatus.pending_payment;
-
-      batch.update(roomRef, {
-        'status': roomNewStatus.toJson(),
-        'currentTenantId': tenantId,
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
-
-      await batch.commit();
-
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Hợp đồng đã được tạo với trạng thái: ${contractStatus.getDisplayName()}'),
-          ),
-        );
+      if (querySnapshot.docs.isNotEmpty) {
+        final data = querySnapshot.docs.first.data();
+        return ContractModel.fromJson(data);
+      } else {
+        return null; // Không tìm thấy
       }
     } catch (e) {
-      debugPrint("Lỗi khi tạo hợp đồng: ${e.toString()}");
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Lỗi khi tạo hợp đồng: ${e.toString()}')),
-        );
-      }
-      rethrow;
+      print('Lỗi khi tìm hợp đồng: $e');
+      return null;
     }
   }
 
-  DateTime _calculateEndDate(DateTime startDate, ContractDuration duration) {
-    int monthsToAdd = duration == ContractDuration.sixMonths ? 6 : 12;
-    var newMonth = startDate.month + monthsToAdd;
-    var newYear = startDate.year;
-    while (newMonth > 12) {
-      newMonth -= 12;
-      newYear += 1;
+  /// Cập nhật trạng thái hợp đồng
+  Future<void> updateContractStatus1(String contractId, ContractStatus status) async {
+    try {
+      await _firestore
+          .collection('contracts')
+          .doc(contractId)
+          .update({
+            'status': status.toJson(),
+            'updatedAt': FieldValue.serverTimestamp(),
+          });
+    } catch (e) {
+      print('Lỗi khi cập nhật hợp đồng: $e');
+      rethrow;
     }
-    var day = startDate.day;
-    var daysInTargetMonth = DateTime(newYear, newMonth + 1, 0).day;
-    if (day > daysInTargetMonth) {
-      day = daysInTargetMonth;
-    }
-    return DateTime(newYear, newMonth, day, startDate.hour, startDate.minute, startDate.second);
   }
 }

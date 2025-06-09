@@ -1,11 +1,11 @@
-// File: lib/screens/contract/contract_form_page.dart
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:do_an_cuoi_ki/models/contract/contract.dart';
 import 'package:do_an_cuoi_ki/models/contract/contract_status.dart';
 import 'package:do_an_cuoi_ki/models/room.dart';
 import 'package:do_an_cuoi_ki/models/request.dart';
-
+import 'package:do_an_cuoi_ki/services/contract_service.dart';
+import 'package:do_an_cuoi_ki/services/request_service.dart';
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 
 class ContractFormPage extends StatefulWidget {
@@ -27,7 +27,9 @@ enum DepositOption { payNow, extend48h } // Thêm enum cho lựa chọn đóng c
 
 class _ContractFormPageState extends State<ContractFormPage> {
   final _formKey = GlobalKey<FormState>();
-  final _firestore = FirebaseFirestore.instance;
+  final _contractService = ContractService();
+  final _requestService = RequestService();
+  
   String? _selectedTenantId;
   List<Map<String, dynamic>> _tenantRequests = [];
 
@@ -94,32 +96,8 @@ Hai bên thống nhất ký kết hợp đồng thuê trọ với các điều k
   Future<void> _loadTenantRequests() async {
     if (!mounted) return;
     try {
-      final querySnapshot = await _firestore
-          .collection('requests')
-          .where('room_id', isEqualTo: widget.roomId)
-          .where('loai_request', isEqualTo: RequestType.thuePhong.toJson())
-          .get();
-
-      final List<Map<String, dynamic>> loadedRequests = [];
-      for (var doc in querySnapshot.docs) {
-        final data = doc.data();
-        if (data['user_khach_id'] != null) {
-          final userDoc = await _firestore.collection('users').doc(data['user_khach_id']).get();
-          if (userDoc.exists && userDoc.data() != null) {
-             loadedRequests.add({
-              'id': doc.id,
-              'user_khach_id': data['user_khach_id'],
-              'Name': userDoc.data()!['name'] ?? data['Name'] ?? 'Chưa có tên',
-            });
-          } else {
-             loadedRequests.add({
-              'id': doc.id,
-              'user_khach_id': data['user_khach_id'],
-              'Name': data['Name'] ?? 'Chưa có tên (user không tồn tại)',
-            });
-          }
-        }
-      }
+      final loadedRequests = await _requestService.getTenantRequestsForRoom(widget.roomId);
+      
       if (!mounted) return;
       setState(() {
         _tenantRequests = loadedRequests;
@@ -155,8 +133,7 @@ Hai bên thống nhất ký kết hợp đồng thuê trọ với các điều k
     }
 
     final DateTime finalEndDate = _calculateEndDate(_startDate, _selectedDuration);
-    final newContractRef = _firestore.collection('contracts').doc();
-    final String generatedContractId = newContractRef.id;
+    final String generatedContractId = FirebaseFirestore.instance.collection('contracts').doc().id;
 
     // Xác định trạng thái hợp đồng dựa trên lựa chọn đóng cọc
     ContractStatus contractStatus;
@@ -183,32 +160,23 @@ Hai bên thống nhất ký kết hợp đồng thuê trọ với các điều k
         updatedAt: DateTime.now(),
       );
 
-      await newContractRef.set(newContract.toJson());
+      await _contractService.createContract(newContract);
 
       // Chỉ cập nhật trạng thái phòng thành 'rented' nếu hợp đồng 'active' (đã đóng cọc)
       // Nếu là 'pending', chủ trọ có thể cần quy trình khác để xác nhận sau khi cọc được thanh toán.
       // Tuy nhiên, để đơn giản, nếu đã tạo hợp đồng thì phòng coi như đã có người giữ chỗ.
       // Nếu bạn muốn logic phức tạp hơn (ví dụ: phòng chỉ rented khi hợp đồng active), bạn cần điều chỉnh.
-      final batch = _firestore.batch();
-      final roomRef = _firestore.collection('rooms').doc(widget.roomId);
-
-      // Nếu hợp đồng active (đóng cọc ngay) thì mới cập nhật phòng là rented.
-      // Nếu là pending, có thể bạn muốn phòng ở trạng thái "pending_rent" hoặc giữ "available"
-      // cho đến khi cọc được thanh toán và hợp đồng chuyển sang active.
-      // Ở đây, tôi giả định nếu đã tạo hợp đồng (dù pending) thì phòng không còn available nữa.
-      // Và currentTenantId được gán.
+      
       RoomStatus roomNewStatus = RoomStatus.pending_payment; // Tạo trạng thái mới cho phòng chờ thanh toán
       if (contractStatus == ContractStatus.active) {
         roomNewStatus = RoomStatus.rented;
       }
 
-
-      batch.update(roomRef, {
-        'status': roomNewStatus.toJson(), // Sử dụng trạng thái phòng mới
-        'ownerId': _selectedTenantId,
-        'updatedAt': DateTime.now().toIso8601String(),
-      });
-      await batch.commit();
+      await _contractService.updateRoomStatusAfterContract(
+        widget.roomId, 
+        _selectedTenantId!, 
+        roomNewStatus,
+      );
 
       if(mounted){
         ScaffoldMessenger.of(context).showSnackBar(
@@ -226,7 +194,8 @@ Hai bên thống nhất ký kết hợp đồng thuê trọ với các điều k
       }
     }
   }
-   Future<void> _selectStartDate(BuildContext context) async {
+  
+  Future<void> _selectStartDate(BuildContext context) async {
     final picked = await showDatePicker(
       context: context,
       initialDate: _startDate,
@@ -243,7 +212,6 @@ Hai bên thống nhất ký kết hợp đồng thuê trọ với các điều k
       });
     }
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -552,7 +520,6 @@ Hai bên thống nhất ký kết hợp đồng thuê trọ với các điều k
     super.dispose();
   }
 }
-
 // Cần đảm bảo RoomStatus có trạng thái `pending_payment`
 // Ví dụ:
 // enum RoomStatus { available, rented, maintenance, pending_payment }

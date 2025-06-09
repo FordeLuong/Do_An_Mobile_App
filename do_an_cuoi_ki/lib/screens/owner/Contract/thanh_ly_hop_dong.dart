@@ -2,6 +2,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:do_an_cuoi_ki/models/contract/contract.dart';
 import 'package:do_an_cuoi_ki/models/contract/contract_status.dart';
 import 'package:do_an_cuoi_ki/models/user.dart';
+import 'package:do_an_cuoi_ki/services/compensation_service.dart';
+import 'package:do_an_cuoi_ki/services/contract_service.dart';
+import 'package:do_an_cuoi_ki/services/room_service.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -30,7 +33,10 @@ class _ThanhLyHopDongState extends State<ThanhLyHopDong>
   ];
 
   List<String> violationTerms=[];
-  
+  final ContractService _contractService = ContractService();
+  final CompensationService _compensationService = CompensationService();
+  final RoomService _roomService = RoomService();
+
 
   @override
   void initState() {
@@ -270,7 +276,7 @@ class _ThanhLyHopDongState extends State<ThanhLyHopDong>
             padding: const EdgeInsets.all(16.0),
             child: ElevatedButton(
               onPressed: () async {
-                ContractModel? tmp = await findActiveContractByRoomId(roomId);
+                ContractModel? tmp = await _contractService.findActiveContractByRoomId(roomId);
                 bool hasErrors = false;
                 List<String> errorMessages = [];
 
@@ -322,7 +328,7 @@ class _ThanhLyHopDongState extends State<ThanhLyHopDong>
                     );
 
                     // Lưu dữ liệu lên Firestore
-                    await saveCompensationData(compensationData,tmp!.id,violationTerms);
+                    await _compensationService.saveCompensationData(compensationData,tmp!.id,violationTerms);
 
                     // Đóng loading và chuyển bước
                     Navigator.of(context).pop();
@@ -496,23 +502,11 @@ class _ThanhLyHopDongState extends State<ThanhLyHopDong>
                       );
 
                       // Cập nhật trạng thái phòng trong Firestore
-                      await FirebaseFirestore.instance
-                          .collection('rooms')
-                          .doc(contract.roomId)
-                          .update({
-                            'status': 'available',
-                            'updatedAt': FieldValue.serverTimestamp(),
-                            'ownerId': '',
-                          });
-
+                      
+                      _roomService.updateRoomStatus(contract.roomId,'available');
                       // Cập nhật trạng thái hợp đồng
-                      await FirebaseFirestore.instance
-                          .collection('contracts')
-                          .doc(contract.id)
-                          .update({
-                            'status': 'expired',
-                            'updatedAt': FieldValue.serverTimestamp(),
-                          });
+                      
+                      _contractService.updateContractStatus1(contract.id,ContractStatus.expired);
 
                       // Cập nhật danh sách điều khoản vi phạm vào bản ghi bồi thường
                       // if (violationTerms.isNotEmpty) {

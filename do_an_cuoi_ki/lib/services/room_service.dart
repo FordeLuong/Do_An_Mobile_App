@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:do_an_cuoi_ki/models/contract/contract_status.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -156,4 +157,65 @@ class RoomService {
     }
   }
 
+
+
+  Future<String> getRoomTitle(String roomId) async {
+    if (roomId.isEmpty) return "Không rõ phòng";
+    try {
+      final doc = await _firestore.collection('rooms').doc(roomId).get();
+      if (doc.exists && doc.data() != null) {
+        return doc.data()!['title'] as String? ?? 'Phòng không tên';
+      } else {
+        return "ID: $roomId (Không tìm thấy)";
+      }
+    } catch (e) {
+      print("Lỗi khi lấy tên phòng ($roomId): $e");
+    }
+    return "ID: $roomId (Lỗi)";
+  }
+
+  // Cập nhật trạng thái phòng khi hợp đồng thay đổi
+  Future<void> updateRoomStatusForContract({
+    required String roomId,
+    required ContractStatus newContractStatus,
+    required String? tenantId,
+  }) async {
+    RoomStatus? newRoomStatus;
+    String? newCurrentTenantId = tenantId;
+
+    if (newContractStatus == ContractStatus.active) {
+      newRoomStatus = RoomStatus.rented;
+    } else if (newContractStatus == ContractStatus.pending) {
+      newRoomStatus = RoomStatus.pending_payment;
+    } else if (newContractStatus == ContractStatus.cancelled || 
+               newContractStatus == ContractStatus.terminated || 
+               newContractStatus == ContractStatus.expired) {
+      newRoomStatus = RoomStatus.available;
+      newCurrentTenantId = null;
+    }
+
+    if (newRoomStatus != null) {
+      await _firestore.collection('rooms').doc(roomId).update({
+        'status': newRoomStatus.toJson(),
+        'currentTenantId': newCurrentTenantId,
+        'updatedAt': Timestamp.now(),
+      });
+    }
+  }
+
+    Future<void> updateRoomStatus(String roomId, String status) async {
+    try {
+      await _firestore
+          .collection('rooms')
+          .doc(roomId)
+          .update({
+            'status': status,
+            'updatedAt': FieldValue.serverTimestamp(),
+            'ownerId': '',
+          });
+    } catch (e) {
+      print('Lỗi khi cập nhật phòng: $e');
+      rethrow;
+    }
+  }
 }
