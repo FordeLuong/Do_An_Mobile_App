@@ -1,11 +1,10 @@
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:do_an_cuoi_ki/models/DVSC.dart';
 import 'package:do_an_cuoi_ki/models/phieu_sua_chua.dart';
+import 'package:do_an_cuoi_ki/services/donvisuachua_service.dart';
+import 'package:do_an_cuoi_ki/services/phieusuachua_service.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-
-
 
 class SuaChua extends StatefulWidget {
   const SuaChua({super.key, required this.roomId, required this.tenantId});
@@ -27,6 +26,10 @@ class _SuaChuaState extends State<SuaChua> with SingleTickerProviderStateMixin {
   final TextEditingController _itemInfoController = TextEditingController();
   final TextEditingController _itemCostController = TextEditingController();
 
+  // Initialize services
+  final DonViSuaChuaService _donViSuaChuaService = DonViSuaChuaService();
+  final PhieuSuaChuaService _phieuSuaChuaService = PhieuSuaChuaService();
+
   @override
   void initState() {
     super.initState();
@@ -36,14 +39,9 @@ class _SuaChuaState extends State<SuaChua> with SingleTickerProviderStateMixin {
 
   Future<void> _loadDonViSuaChuaList() async {
     try {
-      final querySnapshot = await FirebaseFirestore.instance
-          .collection('DonViSuaChuas')
-          .get();
-
+      final list = await _donViSuaChuaService.getDonViSuaChuaList();
       setState(() {
-        _DonViSuaChuaList.addAll(
-          querySnapshot.docs.map((doc) => DonViSuaChua.fromFirestore(doc, null)),
-        );
+        _DonViSuaChuaList.addAll(list);
         _isLoading = false;
       });
     } catch (e) {
@@ -105,9 +103,7 @@ class _SuaChuaState extends State<SuaChua> with SingleTickerProviderStateMixin {
     );
 
     try {
-      await FirebaseFirestore.instance
-          .collection('phieuSuaChua')
-          .add(phieuSuaChua.toFirestore());
+      await _phieuSuaChuaService.addPhieuSuaChua(phieuSuaChua);
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Lưu phiếu sửa chữa thành công!')),

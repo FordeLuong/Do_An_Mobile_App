@@ -3,7 +3,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 // Giả sử RoomStatus được định nghĩa trong models/room.dart
 // Bạn cần import nó nếu RoomStatus được sử dụng trong hàm kiểm tra (ví dụ: kiểm tra status của phòng)
-import 'package:do_an_cuoi_ki/models/room.dart'; // Đảm bảo đường dẫn này đúng
 
 
 /// Enum cho loại yêu cầu của khách
@@ -146,30 +145,5 @@ class RequestModel {
       sdt: sdt ?? this.sdt,
       Name: Name ?? this.Name
     );
-  }
-}
-
-// --- HÀM HELPER LIÊN QUAN ĐẾN REQUEST ---
-
-/// Kiểm tra xem người dùng có đang thuê phòng nào không.
-///
-/// Trả về `true` nếu người dùng đang thuê ít nhất một phòng có trạng thái 'rented',
-/// ngược lại trả về `false`.
-Future<bool> checkIfUserIsCurrentlyRenting(String userId) async {
-  if (userId.isEmpty) {
-    print("checkIfUserIsCurrentlyRenting: userId is empty, returning false.");
-    return false;
-  }
-  try {
-    final querySnapshot = await FirebaseFirestore.instance
-        .collection('rooms') // Tên collection chứa thông tin phòng
-        .where('currentTenantId', isEqualTo: userId)
-        .where('status', isEqualTo: RoomStatus.rented.toJson()) // Sử dụng RoomStatus từ model phòng
-        .limit(1) // Chỉ cần tìm một phòng là đủ
-        .get();
-    return querySnapshot.docs.isNotEmpty;
-  } catch (e) {
-    print("Lỗi khi kiểm tra trạng thái thuê phòng của người dùng $userId: $e");
-    return false; // Mặc định là chưa thuê nếu có lỗi xảy ra
   }
 }

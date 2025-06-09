@@ -1,4 +1,7 @@
 // File: screens/user/my_room_screen.dart
+import 'package:do_an_cuoi_ki/services/contract_service.dart';
+import 'package:do_an_cuoi_ki/services/request_service.dart';
+import 'package:do_an_cuoi_ki/services/room_service.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:do_an_cuoi_ki/models/user.dart';
@@ -26,6 +29,9 @@ class _MyRoomScreenState extends State<MyRoomScreen> {
   String _loadingMessage = "Đang tải thông tin trọ của bạn...";
 
   final DateFormat _dateFormat = DateFormat('dd/MM/yyyy');
+  final ContractService _contractService = ContractService();
+  final RoomService _roomService = RoomService();
+  final RequestService _requestService = RequestService();
 
   @override
   void initState() {
@@ -40,7 +46,7 @@ class _MyRoomScreenState extends State<MyRoomScreen> {
     }
   }
   
-   @override
+  @override
   void didUpdateWidget(covariant MyRoomScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
     print("MyRoomScreen didUpdateWidget: oldUser: ${oldWidget.currentUser?.email}, newUser: ${widget.currentUser?.email}"); // Log
@@ -60,6 +66,7 @@ class _MyRoomScreenState extends State<MyRoomScreen> {
       }
     }
   }
+
   Future<void> _fetchRentedRoomInfo() async {
     if (widget.currentUser == null) return;
 
@@ -69,36 +76,12 @@ class _MyRoomScreenState extends State<MyRoomScreen> {
     });
 
     try {
-      final contractsSnapshot = await FirebaseFirestore.instance
-          .collection('contracts')
-          .where('tenantId', isEqualTo: widget.currentUser!.id)
-          .where('status', isEqualTo: ContractStatus.active.toJson()) // Chỉ lấy hợp đồng đang active
-          .limit(1) // Giả sử người dùng chỉ thuê 1 phòng tại 1 thời điểm với hợp đồng active
-          .get();
+      _activeContract = await _contractService.getActiveContractForTenant(widget.currentUser!.id);
 
-      if (contractsSnapshot.docs.isNotEmpty) {
-        final contractData = contractsSnapshot.docs.first.data();
-        // Đảm bảo gán ID cho contract nếu nó chưa có trong data
-        if (!contractData.containsKey('id')) {
-          contractData['id'] = contractsSnapshot.docs.first.id;
-        }
-        _activeContract = ContractModel.fromJson(contractData);
-
-
-        if (_activeContract != null && _activeContract!.roomId.isNotEmpty) {
-          final roomSnapshot = await FirebaseFirestore.instance
-              .collection('rooms')
-              .doc(_activeContract!.roomId)
-              .get();
-          if (roomSnapshot.exists && roomSnapshot.data() != null) {
-             Map<String, dynamic> roomDataWithId = Map.from(roomSnapshot.data()!);
-             roomDataWithId['id'] = roomSnapshot.id;
-            _rentedRoom = RoomModel.fromJson(roomDataWithId);
-          } else {
-             _loadingMessage = "Không tìm thấy thông tin phòng trọ liên kết với hợp đồng của bạn.";
-          }
-        } else {
-           _loadingMessage = "Hợp đồng không có thông tin phòng trọ.";
+      if (_activeContract != null && _activeContract!.roomId.isNotEmpty) {
+        _rentedRoom = await _roomService.getRoomById1(_activeContract!.roomId);
+        if (_rentedRoom == null) {
+          _loadingMessage = "Không tìm thấy thông tin phòng trọ liên kết với hợp đồng của bạn.";
         }
       } else {
         _loadingMessage = "Bạn hiện không thuê phòng nào (không có hợp đồng đang hiệu lực).";
@@ -183,10 +166,7 @@ class _MyRoomScreenState extends State<MyRoomScreen> {
                       );
 
                       try {
-                        await FirebaseFirestore.instance
-                            .collection('requests')
-                            .doc(request.id)
-                            .set(request.toJson());
+                        await _requestService.createRequest(request);
                         Navigator.pop(dialogContext);
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(content: Text('Gửi yêu cầu thành công!')),

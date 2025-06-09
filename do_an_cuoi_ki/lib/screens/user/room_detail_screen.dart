@@ -1,5 +1,7 @@
 // lib/screens/user/room_detail_screen.dart
 
+import 'package:do_an_cuoi_ki/services/request_service.dart';
+import 'package:do_an_cuoi_ki/services/room_service.dart';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 // Sử dụng thư viện flutter_carousel_widget
@@ -51,6 +53,8 @@ class RoomDetailScreen extends StatefulWidget {
 
 class _RoomDetailScreenState extends State<RoomDetailScreen> {
   int _currentImageIndex = 0;
+  final RequestService _requestService = RequestService();
+  final RoomService _roomService = RoomService();
 
   // Hàm hiển thị dialog tạo yêu cầu đã được cập nhật
   void _showCreateRequestDialog(BuildContext context, String selectedRoomId) async { // Thêm async
@@ -58,7 +62,7 @@ class _RoomDetailScreenState extends State<RoomDetailScreen> {
 
     // Gọi hàm kiểm tra từ request_model.dart
     // userId được lấy từ widget.userId (người dùng đang xem chi tiết)
-    bool isCurrentlyRenting = await checkIfUserIsCurrentlyRenting(widget.userId);
+     bool isCurrentlyRenting = await _requestService.checkIfUserIsCurrentlyRenting(widget.userId);
 
     List<RequestType> availableRequestTypes;
     RequestType? defaultSelectedType;
@@ -171,15 +175,12 @@ class _RoomDetailScreenState extends State<RoomDetailScreen> {
                         roomId: selectedRoomId,
                         userKhachId: widget.userId,
                         thoiGian: DateTime.now(),
-                        sdt: widget.userSdt,
+                        sdt: widget.userSdt, 
                         Name: widget.userName,
                       );
 
                       try {
-                        await FirebaseFirestore.instance
-                            .collection('requests')
-                            .doc(request.id)
-                            .set(request.toJson());
+                        await _requestService.createRequest(request);
 
                         Navigator.pop(dialogContext);
                         if (mounted) {
