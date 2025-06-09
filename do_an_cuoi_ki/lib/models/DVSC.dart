@@ -1,3 +1,4 @@
+// models/DVSC.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 /// Model đại diện cho Nhà cung cấp
@@ -52,15 +53,13 @@ class DonViSuaChua {
   }
 
   /// So sánh 2 nhà cung cấp có giống nhau không
+  /// Đã đơn giản hóa để chỉ so sánh dựa trên id
   @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is DonViSuaChua &&
-          runtimeType == other.runtimeType &&
-          id == other.id &&
-          ten == other.ten &&
-          diaChi == other.diaChi;
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is DonViSuaChua && other.id == id;
+  }
 
   @override
-  int get hashCode => id.hashCode ^ ten.hashCode ^ diaChi.hashCode;
+  int get hashCode => id.hashCode; // Đã đơn giản hóa để chỉ dùng id
 }

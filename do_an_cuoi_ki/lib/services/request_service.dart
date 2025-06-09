@@ -9,7 +9,6 @@ class RequestService {
   RequestService({FirebaseFirestore? firestore})
       : _firestore = firestore ?? FirebaseFirestore.instance;
 
-  /// Lấy các request thuê phòng theo roomId
   /// Tương đương với đoạn query bạn đã cung cấp 
  Future<List<Map<String, dynamic>>> getTenantRequestsForRoom(String roomId) async {
     final querySnapshot = await _firestore
@@ -17,6 +16,7 @@ class RequestService {
         .where('room_id', isEqualTo: roomId)
         .where('loai_request', isEqualTo: RequestType.thuePhong.toJson())
         .get();
+
 
     final List<Map<String, dynamic>> loadedRequests = [];
     
@@ -41,5 +41,25 @@ class RequestService {
     }
     
     return loadedRequests;
+  }
+  Future<List<RequestModel>> getRequestsByTenantAndRoom(
+      String userKhachId, String roomId) async {
+    try {
+      final snapshot = await _firestore
+          .collection('requests')
+    } catch (e) {
+      throw Exception('Lỗi khi tải yêu cầu: $e');
+    }
+  }
+
+  Future<void> updateRequestStatus(String requestId, String status) async {
+    try {
+      await _firestore
+          .collection('requests')
+          .doc(requestId)
+          .update({'status': status});
+    } catch (e) {
+      throw Exception('Lỗi khi cập nhật trạng thái yêu cầu: $e');
+    }
   }
 }

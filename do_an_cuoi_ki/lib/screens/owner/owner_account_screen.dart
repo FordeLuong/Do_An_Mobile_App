@@ -1,6 +1,8 @@
 // lib/screens/owner/owner_account_screen.dart
 
 import 'package:do_an_cuoi_ki/models/user.dart';
+import 'package:do_an_cuoi_ki/screens/owner/owner_room_list_for_repair.dart';
+import 'package:do_an_cuoi_ki/screens/owner/quanlysuachua_screen.dart';
 import 'package:flutter/material.dart';
 import 'contract/owner_contract_list_screen.dart';
 import 'package:do_an_cuoi_ki/screens/user/taikhoan.dart';
@@ -70,9 +72,11 @@ class OwnerAccountScreen extends StatelessWidget {
         icon: Icons.build_circle_outlined,
         onTap: () {
           // TODO: Điều hướng đến màn hình quản lý phiếu sửa chữa
-          print('Navigate to Manage Repair Requests');
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Chức năng Quản lý sửa chữa đang được phát triển.'))
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => OwnerRoomListForRepair(ownerId: currentUser.id), // Truyền ownerId
+            ),
           );
           // Navigator.push(context, MaterialPageRoute(builder: (_) => ManageRepairRequestsScreen()));
         },

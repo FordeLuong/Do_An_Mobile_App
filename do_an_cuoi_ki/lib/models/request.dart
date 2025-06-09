@@ -63,6 +63,7 @@ class RequestModel {
   final DateTime thoiGian; // Sẽ được lưu/tải dưới dạng String (ISO 8601)
   final String sdt;
   final String Name;
+  final String status; // pending, approved, rejected
 
   RequestModel({
     required this.id,
@@ -72,7 +73,8 @@ class RequestModel {
     required this.userKhachId,
     required this.thoiGian,
     required this.sdt,
-    required this.Name
+    required this.Name,
+    this.status = 'pending', // Trạng thái mặc định là 'pending'
   });
 
   factory RequestModel.fromJson(Map<String, dynamic> json) {
@@ -110,6 +112,7 @@ class RequestModel {
       thoiGian: _parseDateTime(json['thoi_gian']), // Sử dụng helper mới
       sdt: json['sdt'] as String? ?? '',
       Name: json['Name'] as String? ?? '',
+      status: json['status'] as String? ?? 'pending',
     );
   }
 
@@ -122,10 +125,22 @@ class RequestModel {
       'user_khach_id': userKhachId,
       'thoi_gian': thoiGian.toIso8601String(), // Lưu DateTime dưới dạng String (ISO 8601)
       'sdt': sdt,
-      'Name': Name
+      'Name': Name,
+      'status': status,
     };
   }
-
+  String get statusText {
+    switch (status) {
+      case 'pending':
+        return 'Chờ xử lý';
+      case 'approved':
+        return 'Đã chấp nhận';
+      case 'rejected':
+        return 'Đã từ chối';
+      default:
+        return 'Không xác định';
+    }
+  }
   RequestModel copyWith({
     String? id,
     RequestType? loaiRequest,
@@ -134,7 +149,8 @@ class RequestModel {
     String? userKhachId,
     DateTime? thoiGian,
     String? sdt,
-    String? Name
+    String? Name,
+    String? status,
   }) {
     return RequestModel(
       id: id ?? this.id,
@@ -144,7 +160,8 @@ class RequestModel {
       userKhachId: userKhachId ?? this.userKhachId,
       thoiGian: thoiGian ?? this.thoiGian,
       sdt: sdt ?? this.sdt,
-      Name: Name ?? this.Name
+      Name: Name ?? this.Name,
+      status: status ?? this.status,
     );
   }
 }
