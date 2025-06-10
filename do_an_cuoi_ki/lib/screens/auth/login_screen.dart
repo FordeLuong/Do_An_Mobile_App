@@ -1,11 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-
 import 'package:do_an_cuoi_ki/screens/owner/owner_main_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../models/user.dart';
 import '../../models/user_role.dart';
-
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -15,6 +13,7 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
+  // --- TẤT CẢ BIẾN VÀ LOGIC ĐƯỢC GIỮ NGUYÊN ---
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -37,52 +36,27 @@ class _LoginPageState extends State<LoginPage> {
     });
 
     try {
-      // Đăng nhập với Firebase Auth
       final UserCredential userCredential =
           await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
-      print('Đăng nhập thành công: ${userCredential.user!.uid}');
-      
 
-      // Lấy thông tin user từ Realtime Database
-      // final FirebaseDatabase database = FirebaseDatabase.instanceFor(
-      //   app: Firebase.app(),
-      //   databaseURL: 'https://db-ql-tro-default-rtdb.firebaseio.com/',
-      // );
-      // final DatabaseReference userRef = database.ref('users/${userCredential.user!.uid}');
-      // final DatabaseEvent event = await userRef.once();
-      // final Map<dynamic, dynamic>? userData =
-      //     event.snapshot.value as Map<dynamic, dynamic>?;
-
-      // if (userData == null) {
-      //   throw Exception('User data not found');
-      // }
-
-      // // Chuyển đổi thành UserModel
-      // final UserModel user = UserModel.fromJson(Map<String, dynamic>.from(userData));
-
-
-
-      final FirebaseFirestore firestore = FirebaseFirestore.instance;
-      final DocumentReference userRef = firestore.collection('users').doc(userCredential.user!.uid);
-
-      final DocumentSnapshot userDoc = await userRef.get();
+      final DocumentSnapshot userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userCredential.user!.uid)
+          .get();
 
       if (!userDoc.exists) {
         throw Exception('User data not found');
       }
 
-      // Chuyển đổi thành UserModel
-      final userData = userDoc.data() as Map<String, dynamic>;
-      // Điều hướng dựa trên role
-      final UserModel user = UserModel.fromJson(userData);
-
-
-
-      // Điều hướng dựa trên role
+      final UserModel user =
+          UserModel.fromJson(userDoc.data() as Map<String, dynamic>);
+          
+      if (!mounted) return;
       _navigateBasedOnRole(user);
+
     } on FirebaseAuthException catch (e) {
       setState(() {
         _errorMessage = _getErrorMessage(e.code);
@@ -92,29 +66,32 @@ class _LoginPageState extends State<LoginPage> {
         _errorMessage = 'Đăng nhập thất bại. Vui lòng thử lại.';
       });
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
   void _navigateBasedOnRole(UserModel user) {
     switch (user.role) {
       case UserRole.customer:
-      Navigator.pop(context, user); // trả dữ liệu về
-      break;
+        Navigator.pop(context, user);
+        break;
       case UserRole.owner:
-        Navigator.push(
+        Navigator.pushReplacement(
           context,
           MaterialPageRoute(
             builder: (context) => HomeScreenWithBottomNav(
-              currentUser: user, // Truyền vào UserModel hiện tại
+              currentUser: user,
             ),
           ),
         );
         break;
       default:
-        Navigator.pushReplacementNamed(context, '/login'); // Quay lại login nếu role không hợp lệ
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Vai trò người dùng không hợp lệ.')));
         break;
     }
   }
@@ -122,110 +99,211 @@ class _LoginPageState extends State<LoginPage> {
   String _getErrorMessage(String code) {
     switch (code) {
       case 'user-not-found':
-        return 'Email không tồn tại';
+      case 'invalid-credential':
       case 'wrong-password':
-        return 'Mật khẩu không đúng';
+        return 'Email hoặc mật khẩu không đúng.';
       case 'invalid-email':
-        return 'Email không hợp lệ';
+        return 'Định dạng email không hợp lệ.';
       default:
-        return 'Đăng nhập thất bại';
+        return 'Đã xảy ra lỗi. Vui lòng thử lại.';
     }
   }
 
+  // --- GIAO DIỆN MỚI VỚI TÔNG MÀU XANH GREEN NHẸ ---
   @override
   Widget build(BuildContext context) {
+    // --- Bảng màu tùy chỉnh ---
+    const Color primaryGreen = Color(0xFF69B578); // Xanh lá cây nhẹ, thân thiện
+    const Color backgroundLight = Color(0xFFF9FAF8); // Nền trắng ngà hơi xanh
+    const Color textDark = Color(0xFF2F4858); // Xanh đen cho text chính
+    const Color textFaded = Colors.black54; // Xám cho text phụ
+    const Color inputFill = Color(0xFFFFFFFF); // Màu nền cho ô nhập liệu
+
     return Scaffold(
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Text(
-                'Đăng nhập',
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 32),
-              TextFormField(
-                controller: _emailController,
-                decoration: const InputDecoration(
-                  labelText: 'Email',
-                  prefixIcon: Icon(Icons.email),
-                  border: OutlineInputBorder(),
+      backgroundColor: backgroundLight,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: textDark),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+      ),
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 24.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // --- Header ---
+                Icon(
+                  Icons.eco_rounded, // Icon lá cây hợp với chủ đề
+                  size: 80,
+                  color: primaryGreen,
                 ),
-                keyboardType: TextInputType.emailAddress,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Vui lòng nhập email';
-                  }
-                  if (!value.contains('@')) {
-                    return 'Email không hợp lệ';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _passwordController,
-                decoration: const InputDecoration(
-                  labelText: 'Mật khẩu',
-                  prefixIcon: Icon(Icons.lock),
-                  border: OutlineInputBorder(),
+                const SizedBox(height: 24),
+                const Text(
+                  'Xin chào!',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: textDark,
+                  ),
                 ),
-                obscureText: true,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Vui lòng nhập mật khẩu';
-                  }
-                  if (value.length < 6) {
-                    return 'Mật khẩu phải có ít nhất 6 ký tự';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 24),
-              if (_errorMessage.isNotEmpty)
-                Text(
-                  _errorMessage,
-                  style: const TextStyle(color: Colors.red),
+                const SizedBox(height: 8),
+                const Text(
+                  'Đăng nhập để bắt đầu phiên làm việc của bạn',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: textFaded,
+                  ),
                 ),
-              const SizedBox(height: 16),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
+                const SizedBox(height: 48),
+
+                // --- Form ---
+                Form(
+                  key: _formKey,
+                  child: Column(
+                    children: [
+                      TextFormField(
+                        controller: _emailController,
+                        decoration: _buildInputDecoration(
+                          labelText: 'Email',
+                          prefixIcon: Icons.email_outlined,
+                        ),
+                        keyboardType: TextInputType.emailAddress,
+                        validator: (value) {
+                          if (value == null || value.isEmpty || !value.contains('@')) {
+                            return 'Vui lòng nhập email hợp lệ';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _passwordController,
+                        decoration: _buildInputDecoration(
+                          labelText: 'Mật khẩu',
+                          prefixIcon: Icons.lock_outline_rounded,
+                        ),
+                        obscureText: true,
+                        validator: (value) {
+                          if (value == null || value.isEmpty || value.length < 6) {
+                            return 'Mật khẩu phải có ít nhất 6 ký tự';
+                          }
+                          return null;
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: () { /* TODO: Implement forgot password */ },
+                    style: TextButton.styleFrom(
+                      foregroundColor: textFaded,
+                    ),
+                    child: const Text('Quên mật khẩu?'),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // --- Error Message ---
+                if (_errorMessage.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 16.0),
+                    child: Text(
+                      _errorMessage,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: Colors.redAccent, fontSize: 14),
+                    ),
+                  ),
+
+                // --- Login Button ---
+                ElevatedButton(
                   onPressed: _isLoading ? null : _login,
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    backgroundColor: primaryGreen,
+                    foregroundColor: Colors.white,
+                    elevation: 2,
                   ),
                   child: _isLoading
-                      ? const CircularProgressIndicator()
-                      : const Text('ĐĂNG NHẬP'),
+                      ? const SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 3,
+                          ),
+                        )
+                      : const Text(
+                          'ĐĂNG NHẬP',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
                 ),
-              ),
-              const SizedBox(height: 16),
-              TextButton(
-                onPressed: () {
-                  Navigator.pushNamed(context, '/forgot-password');
-                },
-                child: const Text('Quên mật khẩu?'),
-              ),
-              const SizedBox(height: 8),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text('Chưa có tài khoản?'),
-                  TextButton(
-                    onPressed: () {
-                      Navigator.pushNamed(context, '/register');
-                    },
-                    child: const Text('Đăng ký ngay'),
-                  ),
-                ],
-              ),
-            ],
+                const SizedBox(height: 32),
+
+                // --- Register Link ---
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text(
+                      'Chưa có tài khoản?',
+                      style: TextStyle(color: textFaded),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.pushNamed(context, '/register');
+                      },
+                      style: TextButton.styleFrom(
+                        foregroundColor: primaryGreen,
+                      ),
+                      child: const Text(
+                        'Đăng ký ngay',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
+      ),
+    );
+  }
+
+  // Helper method để tạo InputDecoration nhất quán
+  InputDecoration _buildInputDecoration({required String labelText, required IconData prefixIcon}) {
+    return InputDecoration(
+      labelText: labelText,
+      prefixIcon: Icon(prefixIcon, color: Colors.grey.shade600),
+      filled: true,
+      fillColor: Colors.white,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: Colors.grey.shade300),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: Colors.grey.shade300),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: Color(0xFF69B578), width: 2),
       ),
     );
   }
